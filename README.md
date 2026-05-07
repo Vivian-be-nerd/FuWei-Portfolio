@@ -24,12 +24,18 @@ Analyzed Part 1 crime data in Los Angeles from 2020 to 2024, visualizing spatial
 - Identified distinct spatial-temporal patterns: property crimes concentrated at noon and 6 PM in commercial areas, while violent crimes clustered in low-income communities, with individuals aged 21-30 at highest risk
 - Proposed actionable policy recommendations: distribute theft prevention cards in high-risk zones, implement automated alert systems, and conduct Night Safety Workshops, with projected crime reduction of 15-20%
 
-**Screenshots**
-![Overview Dashboard](./images/project1_overview.png)
-Overview dashboard showing crime statistics and trends
+---
 
-![Property_crime Dashboard](./images/project1_property_crime.png)
-Interactive geospatial analysis of crime patterns
+**Screenshots**
+
+![Comprehensive Analysis Dashboard](./images/project1_final.png)
+*Final dashboard integrating crime trends, victim demographics, and top crime types across all categories*
+
+![Property Crime Geospatial Analysis](./images/project1_property_crime.png)
+*Interactive map showing property crime hotspots concentrated in Hollywood and West LA commercial areas*
+
+![Violent Crime Geospatial Analysis](./images/project1_violent_crime.png)
+*Spatial distribution of violent crimes in Southeast and 77th Street low-income communities*
 
 ---
 
