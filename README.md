@@ -4,6 +4,16 @@ Hi! I'm Fu Wei, a Business Analytics master's student at Oakland University with
 
 This portfolio showcases my analytical projects across various domains including public safety, workforce analytics, retail optimization, and financial services.
 
+---
+
+## Currently Working On
+
+🔨 **Power BI Projects** - Interactive dashboards for business intelligence  
+🔜 **SQL Projects** - Database design and query optimization (coming soon)  
+🔜 **Machine Learning Projects** - Predictive modeling with Python & R (coming soon)
+
+*This portfolio is continuously updated with new projects across different analytical domains.*
+
 ## Projects by Skill Area
 
 ### 📊 Power BI Projects
