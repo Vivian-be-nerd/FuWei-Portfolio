@@ -25,7 +25,6 @@ Analyzed Part 1 crime data in Los Angeles from 2020 to 2024, visualizing spatial
 - Proposed actionable policy recommendations: distribute theft prevention cards in high-risk zones, implement automated alert systems, and conduct Night Safety Workshops, with projected crime reduction of 15-20%
 
 **Screenshots**
-
 ![Overview Dashboard](./images/project1_overview.png)
 *Overview dashboard showing crime statistics and trends*
 
