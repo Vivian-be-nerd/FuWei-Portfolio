@@ -26,10 +26,11 @@ Analyzed Part 1 crime data in Los Angeles from 2020 to 2024, visualizing spatial
 
 **Screenshots**
 ![Overview Dashboard](./images/project1_overview.png)
-*Overview dashboard showing crime statistics and trends*
+Overview dashboard showing crime statistics and trends
 
 ![Property_crime Dashboard](./images/project1_property_crime.png)
-*Interactive geospatial analysis of crime patterns*
+Interactive geospatial analysis of crime patterns
+
 ---
 
 ## Project 2: Employee Attrition Analysis – Academic Case Study
