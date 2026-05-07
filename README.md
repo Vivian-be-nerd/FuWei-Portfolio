@@ -37,7 +37,7 @@ Analyzed Part 1 crime data in Los Angeles from 2020 to 2024, visualizing spatial
 ![Violent Crime Map](./images/project1_violent_crime.png)
 *Geospatial visualization of violent crime distribution across Los Angeles*
 
-![Victim Demographics](./images/project1_vivtim_demographics.png)
+![Victim Demographics](./images/project1_victim_demographics.png)
 *Integrated analysis of victim profiles, crime distribution patterns, and temporal trends*
 
 ---
