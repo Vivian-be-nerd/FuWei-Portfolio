@@ -40,8 +40,8 @@ Analyzed Part 1 crime data in Los Angeles from 2020 to 2024, visualizing spatial
 ![Victim Demographics](./images/project1_demographics.png)
 *Victim demographics analysis by race, gender, and age*
 
-![Comprehensive Analysis](./images/project1_final.png)
-*Year-over-year trends, crime type composition, and top crime categories*
+![Comprehensive Crime Analysis Dashboard](./images/project1_final.png)
+*Integrated analysis of victim profiles, crime distribution patterns, and temporal trends*
 
 ---
 
