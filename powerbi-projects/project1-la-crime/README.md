@@ -94,4 +94,4 @@ Analyzed Part 1 crime data in Los Angeles from 2020 to 2024, visualizing spatial
 
 ---
 
-[← Back to Power BI Projects](../README.md) | [← Back to Main Portfolio](../../README.md)
+[← Back to Power BI Projects](../PowerBI_README.md) | [← Back to Main Portfolio](../../Portfolio_README.md)
