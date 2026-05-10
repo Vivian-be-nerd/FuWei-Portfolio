@@ -181,5 +181,5 @@ Conducted comprehensive HR analytics examining 40-year workforce trends at Jack 
 
 ---
 
-[← Back to Power BI Projects](../PowerBI_README.md) | [← Back to Main Portfolio](../../Portfolio_README.md)
+[← Back to Power BI Projects](../PowerBI_README.md) | [← Back to Main Portfolio](../../README.md)
 
