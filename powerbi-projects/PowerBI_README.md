@@ -104,4 +104,4 @@ Churn pattern analysis identifying behavioral indicators to develop targeted cus
 
 ---
 
-[← Back to Main Portfolio](../README.md)
+[← Back to Main Portfolio](../Portfolio_README.md)
