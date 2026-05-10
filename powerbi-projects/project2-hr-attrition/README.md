@@ -32,21 +32,17 @@ Conducted comprehensive HR analytics examining 40-year workforce trends at Jack 
 
 ## Dashboard Screenshots
 
-**Complete Dashboard Overview**
+### Complete Dashboard Overview
 ![Full Dashboard](./images/project2_full_image.png)
-*Comprehensive multi-page dashboard showing 40-year workforce trends, department analysis, demographics, and actionable insights*
 
-**Overview & Trend Analysis**
+### Overview & Trend Analysis
 ![Overview](./images/project2_overview_trends.png)
-*Executive summary with total employees (1,470), retention rate (84%), turnover trends from 2010-2025, department-wise analysis, and job level attrition patterns*
 
-**Demographics & Employee Survey Analysis**
+### Demographics & Employee Survey Analysis
 ![Demographics](./images/project2_demographics_survey.png)
-*Employee segmentation by gender, age, marital status, education level, job level/salary group turnover rates, satisfaction scores, and overtime distribution*
 
-**Insights & Actionable Recommendations**
+### Insights & Actionable Recommendations
 ![Insights](./images/project2_insights_actions.png)
-*Deep-dive analysis of turnover drivers: impact of promotions, manager changes, and salary adjustments on retention rates*
 
 ---
 
@@ -186,6 +182,5 @@ Conducted comprehensive HR analytics examining 40-year workforce trends at Jack 
 ---
 
 [← Back to Power BI Projects](../README.md) | [← Back to Main Portfolio](../../README.md)
-
 [← Back to Power BI Projects](../README.md) | [← Back to Main Portfolio](../../README.md)
 
