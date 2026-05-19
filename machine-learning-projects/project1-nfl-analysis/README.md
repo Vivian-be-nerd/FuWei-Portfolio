@@ -106,26 +106,16 @@ Used Gini impurity to rank predictive features:
 
 ## 📁 Project Structure
 
-```
-nfl-game-outcome-analysis/
-│
-├── README.md                              # This file
-│
-├── notebooks/                             # My Decision Tree notebooks
-│   ├── DecisionTree_V1_2.8_0406.ipynb     # V1 specification testing
-│   ├── DecisionTree_V2_2.8_0406.ipynb     # V2 80/20 split
-│   └── DecisionTree_V2_3.7_0406.ipynb     # V2 70/30 split
-│
-├── sas_code/                              # Team SAS implementations
-│   ├── NFL_Logistic_Regression.sas        # Keila's logistic regression
-│   └── Weekly_team_com_NN.sas             # Jalen's neural network
-│
-├── presentation/                          # Team presentation materials
-│   └── NFL_Analysis_Slides.pptx
-│
-└── report/                                # Complete team report
-    └── Final_Project_Report.pdf
-```
+This repository contains:
+
+- **README.md** - Complete project documentation
+- **notebooks/** - My Decision Tree implementation (3 Jupyter notebooks)
+  - `DecisionTree_V1_2.8_0406.ipynb` - V1 specification testing
+  - `DecisionTree_V2_2.8_0406.ipynb` - V2 80/20 split (Best: 87.03%)
+  - `DecisionTree_V2_3.7_0406.ipynb` - V2 70/30 split
+
+**Note**: Team members' SAS code and complete team materials are available upon request.
+
 
 ---
 
