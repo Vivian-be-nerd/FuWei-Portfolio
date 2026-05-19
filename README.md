@@ -74,8 +74,9 @@ This portfolio showcases my analytical projects across various domains including
 
 ---
 
-## Contact
+## 📫 Contact
 
-- **LinkedIn:** [Fu Wei Hsu](https://www.linkedin.com/in/vivianfuweihsu)
-- **Email:** fuwei.hsu1988@gmail.com
-- **GitHub:** [Vivian-be-nerd](https://github.com/Vivian-be-nerd)
+For collaboration or questions about these projects:
+- **Email**: fuwei.hsu1988@gmail.com
+- **LinkedIn**: [Fu Wei Hsu](https://www.linkedin.com/in/vivianfuweihsu)
+- **GitHub**: [@Vivian-be-nerd](https://github.com/Vivian-be-nerd)
