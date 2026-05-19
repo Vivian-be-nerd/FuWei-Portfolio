@@ -14,7 +14,7 @@ This portfolio showcases my analytical projects across various domains including
 
 *This portfolio is continuously updated with new projects across different analytical domains.*
 
-## Projects by Skill Area
+## Projects by Skill Area 
 
 ### 📊 Power BI Projects
 
