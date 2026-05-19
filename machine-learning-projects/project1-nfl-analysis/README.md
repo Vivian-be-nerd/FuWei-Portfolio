@@ -149,8 +149,8 @@ This repository contains:
 - **Jupyter Notebook** - Interactive development and documentation
 
 ### Team Tools
-- **SAS 9.4+** - PROC LOGISTIC, HPNEURAL (Logistic Regression, Neural Network)
-- **Python** - Random Forest implementation
+- **Python** - Decision Tree (Me), Random Forest (Darshil)
+- **SAS 9.4+** - PROC LOGISTIC (Keila's Logistic Regression), HPNEURAL (Jalen's Neural Network)
 
 ---
 
