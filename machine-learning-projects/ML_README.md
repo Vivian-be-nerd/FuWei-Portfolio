@@ -38,7 +38,7 @@ This section showcases my machine learning projects using Python and SAS, focusi
 **Dataset**: 6,972 NFL games (2012-2024) | 175 performance metrics  
 **Course**: MIS5560 Data Science | Oakland University | **Team Size**: 4 members
 
-[View Full Project →](nfl-game-outcome-analysis/)
+[View Full Project →](project1-nfl-analysis/)
 
 ---
 
