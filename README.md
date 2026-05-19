@@ -49,7 +49,7 @@ This portfolio showcases my analytical projects across various domains including
 - **Dataset**: 6,972 NFL games (2012-2024) | 175 performance metrics  
 - **Tools**: Python, SAS
 - **Key Finding**: Defense is the #1 predictor of winning
-- [View Full Project →](machine-learning-projects/nfl-game-outcome-analysis/)
+- [View Full Project →](machine-learning-projects/project1-nfl-analysis/)
 
 *View all Machine Learning projects with detailed analysis →* [Machine Learning Portfolio](./machine-learning-projects/ML_README.md)
 
