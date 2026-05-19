@@ -10,7 +10,6 @@ This portfolio showcases my analytical projects across various domains including
 
 🔨 **Power BI Projects** - Interactive dashboards for business intelligence  
 🔜 **SQL Projects** - Database design and query optimization (coming soon)  
-🔜 **Machine Learning Projects** - Predictive modeling with Python & R (coming soon)
 
 *This portfolio is continuously updated with new projects across different analytical domains.*
 
