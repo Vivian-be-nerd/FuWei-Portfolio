@@ -42,6 +42,15 @@ This portfolio showcases my analytical projects across various domains including
 
 *View all Power BI projects with detailed analysis →* [Power BI Portfolio](./powerbi-projects/PowerBI_README.md)
 
+## 🤖 Machine Learning Projects
+**1. NFL Game Outcome Prediction**
+> Identifying which offensive and defensive metrics have the greatest impact on winning in the NFL through classification modeling
+- **Models**: Neural Network (92.66%), Logistic Regression (92.00%), Random Forest (87.61%), Decision Tree (87.03%)
+- **Dataset**: 6,972 NFL games (2012-2024) | 175 performance metrics  
+- **Tools**: Python, SAS
+- **Key Finding**: Defense is the #1 predictor of winning
+- [View Full Project →](nfl-game-prediction/)
+
 ---
 
 ## Technical Skills
