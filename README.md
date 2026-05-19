@@ -52,6 +52,7 @@ This portfolio showcases my analytical projects across various domains including
 - [View Full Project →](machine-learning-projects/nfl-game-outcome-analysis/)
 
 *View all Machine Learning projects with detailed analysis →* [Machine Learning Portfolio](./machine-learning-projects/ML_README.md)
+
 ---
 
 ## Technical Skills
