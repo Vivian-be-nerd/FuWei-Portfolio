@@ -78,7 +78,7 @@ Used Gini impurity to rank predictive features:
 
 ### Team's Exploratory Data Analysis
 
-![Data Exploration](results/data_exploration_plots_png.PNG)
+![Data Exploration](results/data_exploration.png)
 *Comprehensive exploratory analysis showing correlation patterns and model setup strategy*
 
 **Key Insights from Correlation Analysis**:
@@ -99,7 +99,7 @@ Used Gini impurity to rank predictive features:
 
 ### Model Performance Comparison
 
-![Model Comparison](results/model_comparison_table_png.PNG)
+![Model Comparison](results/model_comparison.png)
 *Performance comparison across all four classification models with Top 3 predictive features identified by each model*
 
 ### Key Team Findings
@@ -197,7 +197,7 @@ jupyter notebook
 
 ### Feature Importance Visualization
 
-![Feature Importance](results/V2_Variable_Importance_png.PNG)
+![Feature Importance](results/feature_importance.png)
 *Top 5 features identified by my Decision Tree model - Defense dominates with 51.39% of predictive power*
 
 ### Performance Metrics
@@ -223,7 +223,7 @@ Defense alone accounts for over **half** of my Decision Tree's predictive power.
 <details>
 <summary>Click to view complete decision tree visualization</summary>
 
-![Decision Tree Structure](results/NFL_V2_Tree_80_20_Graphviz.png)
+![Decision Tree Structure](results/decision_tree.png)
 *Full decision tree structure showing the complete prediction logic and split criteria for the best model (V2 80/20)*
 
 </details>
