@@ -67,16 +67,40 @@ Used Gini impurity to rank predictive features:
 
 ---
 
+## 📊 Dataset
+
+**Source**: [NFL Stats (2012-2024) via Kaggle](https://www.kaggle.com/datasets/philiphyde1/nfl-stats-1999-2022)
+
+### Dataset Quality
+- **Original**: 7,088 team-game records
+- **Cleaned**: 6,972 records (removed 116 rows with missing point values)
+- **Class Balance**: 51.66% Loss / 48.33% Win (near-perfect balance)
+
+### Team's Exploratory Data Analysis
+
+![Data Exploration](results/data_exploration_plots_png.PNG)
+*Comprehensive exploratory analysis showing correlation patterns and model setup strategy*
+
+**Key Insights from Correlation Analysis**:
+- **Defensive Performance**: `def_total_off_points` shows strongest correlation (r = -0.54)
+- **Offensive Balance**: Pass percentage (r = -0.48) vs Rush percentage (r = +0.43) indicates balance matters
+- **Key Finding**: No single factor dominates (all |r| < 0.6) — NFL victories require balanced excellence across defense, ball security, and offensive strategy
+
+### Features
+- **175 total variables**
+  - Offensive metrics: passing, rushing, total yards, touchdowns, efficiency
+  - Defensive metrics: points allowed, yards allowed, defensive efficiency
+  - Engineered features: `turnover_differential`
+- **Target Variable**: `game_result` (1 = Win, 0 = Loss)
+
+---
+
 ## 📊 Team Results & Findings
 
 ### Model Performance Comparison
 
-| Model | Validation Accuracy | Overfitting | Key Strength |
-|-------|---------------------|-------------|--------------|
-| Neural Network (Jalen) | 92.66% | -0.11% | Highest accuracy, complex patterns |
-| Logistic Regression (Keila) | 92.00% | -0.01% | Best interpretability, near-zero overfitting |
-| Random Forest (Darshil) | 87.61% | -4.95% | Robust ensemble method |
-| **Decision Tree (Me)** | **87.03%** | **-3.13%** | **Highly interpretable, mirrors coaching logic** |
+![Model Comparison](results/model_comparison_table_png.PNG)
+*Performance comparison across all four classification models with Top 3 predictive features identified by each model*
 
 ### Key Team Findings
 
@@ -113,27 +137,13 @@ This repository contains:
   - `DecisionTree_V1_2.8_0406.ipynb` - V1 specification testing
   - `DecisionTree_V2_2.8_0406.ipynb` - V2 80/20 split (Best: 87.03%)
   - `DecisionTree_V2_3.7_0406.ipynb` - V2 70/30 split
+- **results/** - Visualization outputs
+  - `model_comparison_table_png.PNG` - Team model comparison
+  - `V2_Variable_Importance_png.PNG` - My feature importance analysis
+  - `data_exploration_plots_png.PNG` - Team exploratory analysis
+  - `NFL_V2_Tree_80_20_Graphviz.png` - My decision tree visualization
 
 **Note**: Team members' SAS code and complete team materials are available upon request.
-
-
----
-
-## 📊 Dataset
-
-**Source**: [NFL Stats (2012-2024) via Kaggle](https://www.kaggle.com/datasets/philiphyde1/nfl-stats-1999-2022)
-
-### Dataset Quality
-- **Original**: 7,088 team-game records
-- **Cleaned**: 6,972 records (removed 116 rows with missing point values)
-- **Class Balance**: 51.66% Loss / 48.33% Win (near-perfect balance)
-
-### Features
-- **175 total variables**
-  - Offensive metrics: passing, rushing, total yards, touchdowns, efficiency
-  - Defensive metrics: points allowed, yards allowed, defensive efficiency
-  - Engineered features: `turnover_differential`
-- **Target Variable**: `game_result` (1 = Win, 0 = Loss)
 
 ---
 
@@ -168,7 +178,7 @@ pip install scikit-learn pandas numpy matplotlib seaborn jupyter
 
 2. **Navigate to the notebooks folder**
 ```bash
-cd notebooks/
+cd project1-nfl-analysis/notebooks/
 ```
 
 3. **Launch Jupyter Notebook**
@@ -185,20 +195,38 @@ jupyter notebook
 
 ## 📈 My Decision Tree Results
 
+### Feature Importance Visualization
+
+![Feature Importance](results/V2_Variable_Importance_png.PNG)
+*Top 5 features identified by my Decision Tree model - Defense dominates with 51.39% of predictive power*
+
 ### Performance Metrics
 - **Validation Accuracy**: 87.03%
 - **Training Accuracy**: 90.16%
 - **Overfitting**: -3.13% (well-controlled)
 
-### Feature Importance (Top 5)
-1. `def_total_off_points` - **51.39%** (dominant)
-2. `off_pass_td_pct` - 13.95%
-3. `off_rush_touchdown` - 13.70%
-4. `off_total_off_yards` - 8.32%
-5. `off_pass_touchdown` - 7.03%
+### Feature Importance Rankings
+
+| Rank | Feature | Importance | Category |
+|------|---------|-----------|----------|
+| 1 | `def_total_off_points` | **51.39%** | Defense (Dominant) |
+| 2 | `off_pass_td_pct` | 13.95% | Offensive Efficiency |
+| 3 | `off_rush_touchdown` | 13.70% | Offensive Scoring |
+| 4 | `off_total_off_yards` | 8.32% | Offensive Volume |
+| 5 | `off_pass_touchdown` | 7.03% | Offensive Scoring |
 
 ### Key Takeaway from My Analysis
 Defense alone accounts for over **half** of my Decision Tree's predictive power. This finding was consistent across all four team models, validating the "defense wins championships" principle with quantitative evidence.
+
+### Decision Tree Structure
+
+<details>
+<summary>Click to view complete decision tree visualization</summary>
+
+![Decision Tree Structure](results/NFL_V2_Tree_80_20_Graphviz.png)
+*Full decision tree structure showing the complete prediction logic and split criteria for the best model (V2 80/20)*
+
+</details>
 
 ---
 
