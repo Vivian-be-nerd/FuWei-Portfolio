@@ -13,6 +13,10 @@ When I converted my R-based music analysis project into Python, I documented eve
 
 These templates can be applied to **any structured dataset**, not just music data.
 
+> 💡 **See it in action:**  
+> These guides were built from the [Music Hit Prediction Project](../data-analysis-projects/music-analysis/proposal.md)  
+> — analyzing 60+ years of Billboard Hot 100 with Spotify audio features.
+
 ---
 
 ## Guides
