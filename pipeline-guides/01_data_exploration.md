@@ -157,7 +157,6 @@ df.isna().sum()
 
 ## Step 4: Summary Template
 
-```markdown
 ### Validation Results
 
 | Check Item | Method | Result |
@@ -173,11 +172,11 @@ df.isna().sum()
 ### ⚠️ Issues Found
 | Column | Issue | Description | Action |
 |--------|-------|-------------|--------|
-| | | | |
+|        |       |             |        |
 
 ### 🔜 Next Step
-Above issues will be handled in 03_data_wrangling.
-```
+- Above issues will be handled in `03_data_wrangling`.
+- Patterns and distributions worth analyzing will be explored in `02_data_pattern_analysis`.
 
 ---
 
@@ -197,45 +196,48 @@ Above issues will be handled in 03_data_wrangling.
 ## 📝 Decision Flow
 
 ```
-Read Data
-  ↓
-Does the column have dates?
-  → Full date   → pd.to_datetime()
-  → Year only   → Use numbers directly
+// Step 1: Read Data //
+        ↓
 
-Multiple files?
+// Step 2: Multiple files? //
   → Yes → loop + pd.concat()
   → No  → pd.read_csv()
+        ↓
 
-Extra index column?
+// Step 3: Extra index column? //
   → Yes → index_col=0
   → No  → Normal read
+         ↓
 
-Run Validation (order matters!)
+// 3.1 Size of DataFrame //
+  → Does the column have dates?
+    → Full date   → pd.to_datetime()
+    → Year only   → Use numbers directly
+         ↓
+3.2 Column Names
+  → list(df)
+  ↓
+3.3 Column Value Check
   1. Duplicate Check      ← Always first!
-  2. Column Reference     ← Understand columns
+  2. Column Reference     ← Understand each column
   3. check_data_quality   ← Health check (NaN, 0, blank)
-  4. info() + isna()      ← Detailed info
-
+  ↓
+3.4 Detailed Info
+  → df.info()
+  → df.isna().sum()
+  ↓
 Is 0 valid?
   → Check business logic of that column
   → Not sure → Check official documentation
+         ↓
 
-Write Summary
+// Step 4: Summary //
   → List all check results
   → Flag problem columns
-  → State next steps (→ 03_data_wrangling)
+  → State next steps
 ```
 
 ---
 
-## 🔗 Related Guides
-
-| Guide | Description |
-|-------|-------------|
-| [02 Data Pattern Analysis](./02_data_pattern.md) | Distribution, outliers, correlations |
-| [03 Data Wrangling](./03_data_wrangling.md) | Handle issues found in 01 |
-
----
 
 *Part of [Fu Wei's Data Analysis Pipeline](../README.md)*
