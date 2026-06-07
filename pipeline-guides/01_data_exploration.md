@@ -1,5 +1,5 @@
 # 📊 01 Data Exploration Guide
-
+![Data Exploration Guide](./images/data_exploration_clean_mindmap.svg)
 
 ## Universal Data Exploration Template
 
