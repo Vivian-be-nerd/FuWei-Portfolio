@@ -1,4 +1,6 @@
 # 📊 01 Data Exploration Guide
+
+
 ## Universal Data Exploration Template
 
 **Applicable to:** Any structured dataset (CSV, Excel, Database)  
