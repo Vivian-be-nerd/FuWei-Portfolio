@@ -36,11 +36,11 @@ df = pd.read_csv("file.csv")
 
 ### Decision Rules
 
-| Situation | Method | Example |
-|-----------|--------|---------|
-| Regular CSV | `pd.read_csv("file.csv")` | D1 Billboard |
-| CSV with extra index column | `pd.read_csv("file.csv", index_col=0)` | D3 Music Dataset |
-| Multiple files to merge | `loop + pd.concat()` | D2 Spotify |
+| Situation | Method | Example | Dataset Source |
+|-----------|--------|---------|----------------|
+| Regular CSV | `pd.read_csv("file.csv")` | D1 Billboard | [Link →](https://www.kaggle.com/datasets/dhruvildave/billboard-the-hot-100-songs) |
+| Multiple files to merge | `loop + pd.concat()` | D2 Spotify | [Link →](https://www.kaggle.com/datasets/theoverman/the-spotify-hit-predictor-dataset) |
+| CSV with extra index column | `pd.read_csv("file.csv", index_col=0)` | D3 Music Dataset | [Link →](https://www.kaggle.com/datasets/saurabhshahane/music-dataset-1950-to-2019) |
 
 ---
 
