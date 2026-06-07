@@ -1,5 +1,20 @@
 # 📊 01 Data Exploration Guide
-![Data Exploration Guide](./images/data_exploration_clean_mindmap.svg)
+```mermaid
+flowchart TD
+    A[📊 Data Exploration Guide] --> B[Data Preparation & Loading]
+    A --> C[Validation & Quality Check]
+    A --> D[Summary & Lessons Learned]
+
+    B --> B1[Understand data background\n& column meanings]
+    B --> B2[CSV reading decision rules]
+
+    C --> C1[Data size &\ndate range validation]
+    C --> C2[Duplicate check\n& quality function]
+    C --> C3[Business logic:\nIs 0 valid?]
+
+    D --> D1[Standardized\nValidation Summary]
+    D --> D2[Common mistakes\n& fix checklist]
+```
 
 ## Universal Data Exploration Template
 
