@@ -1,0 +1,176 @@
+---
+title: "04 Data Joining.qmd"
+author: "Fu Wei Hsu"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-location: right
+    toc-title: "On this page"
+    code-tools: true
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+editor: visual
+---
+
+# Executive Summary
+
+**Purpose:** Merge three standardized datasets (data1,2,3) to produce the final dataset for subsequent analysis.
+
+**Tasks performed in this document:**
+
+- D1 + D2 exact match (primary join)
+
+- D1+D2 match evaluation (match rate, decade distribution)
+
+- D1 + D3 exact match (auxiliary join) - Output final dataset for analysis
+
+**Data Source:** `03_Data_Wrangling.qmd`three RDSs
+
+------------------------------------------------------------------------
+
+```{r}
+# Setup
+library(tidyverse)
+library(janitor)
+library(gt)
+
+# Load cleaned data from 03
+D1_wrangled <- readRDS("../Data/wrangled_D1.rds")
+D2_wrangled <- readRDS("../Data/wrangled_D2.rds")
+D3_wrangled <- readRDS("../Data/wrangled_D3.rds")
+
+cat("D1 (Billboard):", nrow(D1_wrangled), "rows\n")
+cat("D2 (Spotify):", nrow(D2_wrangled), "rows\n")
+cat("D3 (Music Dataset):", nrow(D3_wrangled), "rows\n\n")
+```
+
+## Part 1: D1 + D2 Join (Primary Join)
+
+```{r}
+# Prepare D2 join columns
+# Keep one row per join_key in D2 (deduplication)
+# Retain all audio features and target
+D2_for_join <- D2_wrangled %>%
+  distinct(join_key, .keep_all = TRUE)
+
+cat("Original:", nrow(D2_wrangled), "rows, duplicate join_keys removed\n")
+
+# Execute Left Join
+# Use left join to keep all D1 records
+# Matched records will include D2 audio features
+# Unmatched records will have NA for audio feature columns
+D1_D2_joined <- D1_wrangled %>%
+  left_join(
+    D2_for_join %>% select(
+      join_key,
+      # audio features
+      danceability, energy, key, loudness, mode,
+      speechiness, acousticness, instrumentalness,
+      liveness, valence, tempo, duration_ms,
+      time_signature, chorus_hit, sections,
+      # target label
+      target,
+      # decade
+      decade
+    ),
+    by = "join_key"
+  )
+
+#D1 + D2 Join complete
+cat("Total rows after join:", nrow(D1_D2_joined), "\n")
+```
+
+## Part 2: D1+D2 Match Rate Evaluation
+
+```{r}
+# Overall Match Rate
+matched    <- D1_D2_joined %>% filter(!is.na(target)) %>% nrow()
+unmatched  <- D1_D2_joined %>% filter(is.na(target)) %>% nrow()
+total      <- nrow(D1_D2_joined)
+
+cat("Total records:    ", total, "rows\n")
+cat("Matched:    ", matched, "rows (",
+    round(matched / total * 100, 2), "%)\n")
+cat("unmatched :      ", unmatched, "rows (",
+    round(unmatched / total * 100, 2), "%)\n\n")
+
+# Match Rate by Decade
+D1_D2_joined %>%
+  mutate(year = as.integer(format(date, "%Y")),
+         decade_d1 = paste0(floor(year / 10) * 10, "s")) %>%
+  group_by(decade_d1) %>%
+  summarise(
+    total     = n(),
+    matched   = sum(!is.na(target)),
+    match_pct = round(matched / total * 100, 2)
+  ) %>%
+  arrange(decade_d1) %>%
+  gt() %>%
+  tab_header(title = "D1+D2 Match Rate by Dacades") %>%
+  fmt_number(columns = c(total, matched), decimals = 0, use_seps = TRUE)
+```
+
+## Part 3: D1-D2 Unmatched Records Sample Check
+
+```{r}
+D1_D2_joined %>%
+  filter(is.na(target)) %>%
+  mutate(year = as.integer(format(date, "%Y"))) %>%
+  distinct(artist_clean, song_clean, year) %>%
+  arrange(year) %>%
+  slice_head(n = 10) %>%
+  gt() %>%
+  tab_header(title = "D1+D2 Unmatched Records Sample")
+```
+
+## Part 4: D1 + D2 + D3 Join (Auxiliary Join)
+
+```{r}
+
+D3_for_join <- D3_wrangled %>%
+  distinct(join_key, .keep_all = TRUE)
+
+cat("D3 distinct rows:", nrow(D3_for_join), "\n")
+
+D1_D2_D3_joined <- D1_D2_joined %>%
+  left_join(
+    D3_for_join %>% select(
+      join_key,
+      genre,
+      dating, violence, `world/life`, `night/time`,
+      romantic, communication, obscene, music,
+      sadness, feelings, topic
+    ),
+    by = "join_key"
+  )
+
+
+# Validation 
+total      <- nrow(D1_D2_D3_joined)
+d2_matched <- sum(!is.na(D1_D2_D3_joined$target))
+d3_matched <- sum(!is.na(D1_D2_D3_joined$genre))
+both_matched <- sum(!is.na(D1_D2_D3_joined$target) & 
+                    !is.na(D1_D2_D3_joined$genre))
+
+cat("Total rows: ", total, "\n")
+cat("D2 matched (has target):  ", d2_matched,
+    "(", round(d2_matched / total * 100, 2), "%)\n")
+cat("D3 matched (has genre):   ", d3_matched,
+    "(", round(d3_matched / total * 100, 2), "%)\n")
+cat("Both D2 + D3 matched:     ", both_matched,
+    "(", round(both_matched / total * 100, 2), "%)\n\n")
+```
+
+## Part 5: Save Final Analysis Dataset
+
+```{r}
+# Save single merged file
+saveRDS(D1_D2_D3_joined, "../Data/D1_D2_D3_joined.rds")
+
+cat("Dataset size check:\n")
+cat("Total rows:", nrow(D1_D2_D3_joined), "\n")
+cat("Total columns:", ncol(D1_D2_D3_joined), "\n")
+```

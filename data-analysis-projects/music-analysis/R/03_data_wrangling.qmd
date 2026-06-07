@@ -1,0 +1,415 @@
+---
+title: "03 Data Wrangling"
+author: "Fu Wei Hsu"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-location: right
+    toc-title: "On this page"
+    code-tools: true
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+editor: visual
+---
+
+# Executive Summary
+
+**Purpose:** Standardize three datasets(data1,2,3) to enable join matching in subsequent steps.
+
+**Tasks performed in this document:** 
+
+- Artist field standardization (remove collaboration markers, unify case) 
+
+- Song/Track field standardization (remove version markers, unify case) 
+
+- Column name unification (align three datasets) - Generate Join Key (preparation for 04_Data_Joining)
+
+
+------------------------------------------------------------------------
+
+# Setup
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(gt)
+
+# Load cleaned data
+D1_clean_base <- readRDS("../Data/cleaned_D1.rds")
+D2_clean_base <- readRDS("../Data/cleaned_D2.rds")
+D3_clean_base <- readRDS("../Data/cleaned_D3.rds")
+
+cat("D1 (Billboard):", nrow(D1_clean_base), "rows\n")
+cat("D2 (Spotify):", nrow(D2_clean_base), "rows\n")
+cat("D3 (Music Dataset):", nrow(D3_clean_base), "rows\n")
+```
+
+------------------------------------------------------------------------
+
+# Part 1: Dataset 1 (Billboard)
+
+## Dataset 1 Wrangling
+
+```{r}
+# Artist cleaning function 
+clean_d1_artist <- function(x) {
+  x %>%
+    str_to_lower() %>%
+    str_trim() %>%
+    # Remove parentheses containing featuring / feat. / duet with
+    str_remove_all(regex("\\s*\\([^)]*(featuring|feat\\.|duet with)[^)]*\\)", ignore_case = TRUE)) %>%
+    # Remove "featuring" and everything after it
+    str_remove(regex("\\s+featuring.*$", ignore_case = TRUE)) %>%
+    # Remove "feat" and everything after it
+    str_remove(regex("\\s*\\(?\\s*feat\\..*$", ignore_case = TRUE)) %>%
+    # Remove "ft." and everything after it
+    str_remove(regex("\\s+ft\\..*$", ignore_case = TRUE)) %>%
+    # Remove "with" and everything after it
+    str_remove(regex("\\s+with\\s+.*$", ignore_case = TRUE)) %>%
+    str_trim()
+}
+
+# Song cleaning function 
+clean_d1_song <- function(x) {
+  x %>%
+    str_to_lower() %>%
+    str_trim() %>%
+    # Remove all square brackets and their contents
+    str_remove_all("\\s*\\[.*?\\]") %>%
+    # Remove version markers inside parentheses
+    str_remove_all(regex("\\s*\\([^)]*remix[^)]*\\)", ignore_case = TRUE)) %>%
+    str_remove_all(regex("\\s*\\([^)]*remaster[^)]*\\)", ignore_case = TRUE)) %>%
+    str_remove_all(regex("\\s*\\([^)]*(live version|acoustic|unplugged)[^)]*\\)", ignore_case = TRUE)) %>%
+    str_remove_all(regex("\\s*\\([^)]*(featuring|feat\\.|ft\\.)[^)]*\\)", ignore_case = TRUE)) %>%
+    # Remove Remix marker after dash
+    str_remove(regex("\\s*-\\s*.*remix.*$", ignore_case = TRUE)) %>%
+    str_trim()
+}
+
+# Apply cleaning 
+D1_wrangled <- D1_clean_base %>%
+  mutate(
+    artist_clean = clean_d1_artist(artist),
+    song_clean   = clean_d1_song(song)
+  )
+
+cat("D1 cleaning data total rows:", nrow(D1_wrangled), "\n")
+```
+
+## Dataset 1 Validation
+
+```{r}
+# Artist changed records
+D1_wrangled %>%
+  filter(artist != artist_clean) %>%
+  distinct(artist, artist_clean) %>%
+  slice_head(n = 20) %>%
+  gt() %>%
+  tab_header(title = "D1 Artist Cleaning Effect (Changed Records Top 20)")
+```
+
+```{r}
+# Artist changed records
+D1_wrangled %>%
+  filter(song != song_clean) %>%
+  distinct(song, song_clean) %>%
+  slice_head(n = 20) %>%
+  gt() %>%
+  tab_header(title = "D1 Song Cleaning Effect (Changed Records Top 20)")
+```
+
+```{r}
+artist_changed <- D1_wrangled %>%
+  filter(artist != artist_clean) %>%
+  nrow()
+
+song_changed <- D1_wrangled %>%
+  filter(song != song_clean) %>%
+  nrow()
+
+cat("Artist records changed:", artist_changed, "rows (",
+    round(artist_changed / nrow(D1_wrangled) * 100, 2), "%)\n")
+cat("Song records changed:  ", song_changed, "rows (",
+    round(song_changed / nrow(D1_wrangled) * 100, 2), "%)\n\n")
+
+```
+
+# Part 2: Dataset 2 (Spotify)
+
+## Dataset 2 Wrangling
+
+```{r d2-wrangling}
+# Artist cleaning function
+clean_d2_artist <- function(x) {
+  x %>%
+    str_to_lower() %>%
+    str_trim() %>%
+    # Remove parentheses containing featuring / feat. / duet with
+    str_remove_all(regex("\\s*\\([^)]*(featuring|feat\\.|duet with)[^)]*\\)", ignore_case = TRUE)) %>%
+    # Remove "featuring" and everything after it
+    str_remove(regex("\\s+featuring.*$", ignore_case = TRUE)) %>%
+    # Remove "feat." and everything after it
+    str_remove(regex("\\s*\\(?\\s*feat\\..*$", ignore_case = TRUE)) %>%
+    # Remove "ft." and everything after it
+    str_remove(regex("\\s+ft\\..*$", ignore_case = TRUE)) %>%
+    # Remove "with" and everything after it
+    str_remove(regex("\\s+with\\s+.*$", ignore_case = TRUE)) %>%
+    str_trim()
+}
+
+# Track cleaning function
+clean_d2_track <- function(x) {
+  x %>%
+    str_to_lower() %>%
+    str_trim() %>%
+    # Remove version markers inside parentheses
+    str_remove_all("\\s*\\[.*?\\]") %>%
+    # Remove version markers inside parentheses
+    str_remove_all(regex("\\s*\\([^)]*remix[^)]*\\)", ignore_case = TRUE)) %>%
+    str_remove_all(regex("\\s*\\([^)]*remaster[^)]*\\)", ignore_case = TRUE)) %>%
+    str_remove_all(regex("\\s*\\([^)]*(live version|acoustic|unplugged)[^)]*\\)", ignore_case = TRUE)) %>%
+    str_remove_all(regex("\\s*\\([^)]*(featuring|feat\\.|ft\\.)[^)]*\\)", ignore_case = TRUE)) %>%
+    str_remove_all(regex("\\s*\\([^)]*radio edit[^)]*\\)", ignore_case = TRUE)) %>%
+    # Version markers after dash
+    str_remove(regex("\\s*-\\s*.*(remaster|remastered|remasteris[eé]).*$", ignore_case = TRUE)) %>%
+    str_remove(regex("\\s*-\\s*(live|version live|live version)\\s*$", ignore_case = TRUE)) %>%
+    str_remove(regex("\\s*-\\s*.*remix.*$", ignore_case = TRUE)) %>%
+    str_remove(regex("\\s*-\\s*radio edit.*$", ignore_case = TRUE)) %>%
+    str_remove(regex("\\s*-\\s*feat\\..*$", ignore_case = TRUE)) %>%
+    str_trim()
+}
+
+# Apply cleaning + unify column names
+D2_wrangled <- D2_clean_base %>%
+  rename(
+    artist = artist,   
+    song   = track     # rename track to song, aling with D1
+  ) %>%
+  mutate(
+    artist_clean = clean_d2_artist(artist),
+    song_clean   = clean_d2_track(song)
+  )
+
+cat("D2 cleaning data total rows:", nrow(D2_wrangled), "\n")
+```
+
+## Dataset 2 Validation
+
+```{r}
+#D2 Artist Cleaning Validation\n
+D2_wrangled %>%
+  filter(artist != artist_clean) %>%
+  distinct(artist, artist_clean) %>%
+  slice_head(n = 20) %>%
+  gt() %>%
+  tab_header(title = "D2 Artist Cleaning Effect (Changed Records Top 20)")
+```
+
+```{r}
+#D2 Song Cleaning Validation
+D2_wrangled %>%
+  filter(song != song_clean) %>%
+  distinct(song, song_clean) %>%
+  slice_head(n = 20) %>%
+  gt() %>%
+  tab_header(title = "D2 Song Cleaning Effect (Changed Records Top 20)")
+```
+
+```{r}
+# D2 Cleaning Summary
+artist_changed <- D2_wrangled %>%
+  filter(artist != artist_clean) %>%
+  nrow()
+
+song_changed <- D2_wrangled %>%
+  filter(song != song_clean) %>%
+  nrow()
+
+cat("Artist records changed:", artist_changed, "rows (",
+    round(artist_changed / nrow(D2_wrangled) * 100, 2), "%)\n")
+cat("Songs records changed:", song_changed, "rows (",
+    round(song_changed / nrow(D2_wrangled) * 100, 2), "%)\n\n")
+
+```
+
+# Part 3: Dataset 3 (Music Dataset)
+
+## Dataset 3 Wrangling
+
+
+```{r}
+# D3 (Music Dataset) Wrangling
+# Artist cleaning function 
+clean_d3_artist <- function(x) {
+  x %>%
+    str_trim()
+}
+
+# Song cleaning function
+clean_d3_song <- function(x) {
+  x %>%
+    str_trim() %>%
+    # Remove all square brackets and their contents
+    str_remove_all("\\s*\\[.*?\\]") %>%
+    # Remove version markers inside parentheses
+    str_remove_all(regex("\\s*\\([^)]*remix[^)]*\\)", ignore_case = TRUE)) %>%
+    str_remove_all(regex("\\s*\\([^)]*remaster[^)]*\\)", ignore_case = TRUE)) %>%
+    str_remove_all(regex("\\s*\\([^)]*(feat\\.|featuring)[^)]*\\)", ignore_case = TRUE)) %>%
+    str_remove_all(regex("\\s*\\([^)]*radio edit[^)]*\\)", ignore_case = TRUE)) %>%
+    str_remove_all(regex("\\s*\\([^)]*(acoustic|unplugged)[^)]*\\)", ignore_case = TRUE)) %>%
+    # For "live", only remove explicit (live) or (live version) patterns in parentheses
+    # Do not touch "live" appearing in song titles (e.g., 'as long as i live')
+    str_remove_all(regex("\\s*\\(live version\\)", ignore_case = TRUE)) %>%
+    str_remove_all(regex("\\s*\\(live\\)", ignore_case = TRUE)) %>%
+    str_trim()
+}
+
+# Apply cleaning + unify column names
+D3_wrangled <- D3_clean_base %>%
+  rename(
+    artist = artist_name,  # rename artist_name to artist, align with D1
+    song   = track_name    # rename track_name to song, align with D1
+  ) %>%
+  mutate(
+    artist_clean = clean_d3_artist(artist),
+    song_clean   = clean_d3_song(song)
+  )
+
+cat("D3 cleaning data total rows:", nrow(D3_wrangled), "\n")
+```
+
+## Dataset 3 Validation
+
+```{r}
+# D3 artist
+artist_changed <- D3_wrangled %>%
+  filter(artist != artist_clean) %>%
+  nrow()
+
+cat("Artist records changed:", artist_changed, "rows\n")
+
+D3_wrangled %>%
+  filter(artist != artist_clean) %>%
+  distinct(artist, artist_clean) %>%
+  slice_head(n = 20) %>%
+  gt() %>%
+  tab_header(title = "3 Artist Cleaning Effect (Changed Records)")
+```
+
+```{r}
+# D3 Song Cleaning Validation
+D3_wrangled %>%
+  filter(song != song_clean) %>%
+  distinct(song, song_clean) %>%
+  slice_head(n = 20) %>%
+  gt() %>%
+  tab_header(title = "D3 Song Cleaning Effect (Changed Records Top 20)")
+```
+
+```{r}
+# D3 Cleaning Summary
+artist_changed <- D3_wrangled %>%
+  filter(artist != artist_clean) %>%
+  nrow()
+
+song_changed <- D3_wrangled %>%
+  filter(song != song_clean) %>%
+  nrow()
+
+cat("Artist records changed: ", artist_changed, "rows (",
+    round(artist_changed / nrow(D3_wrangled) * 100, 2), "%)\n")
+cat("Song records changed: ", song_changed, "rows (",
+    round(song_changed / nrow(D3_wrangled) * 100, 2), "%)\n\n")
+
+```
+
+# Part 4: Join Key Creation
+
+## All Data create Join Key
+
+```{r}
+# Generate Join Key
+D1_wrangled <- D1_wrangled %>%
+  mutate(
+    join_key = paste(artist_clean, song_clean, sep = "|")
+  )
+
+D2_wrangled <- D2_wrangled %>%
+  mutate(
+    join_key = paste(artist_clean, song_clean, sep = "|")
+  )
+
+D3_wrangled <- D3_wrangled %>%
+  mutate(
+    join_key = paste(artist_clean, song_clean, sep = "|")
+  )
+
+```
+
+## D1 Join Key
+
+```{r}
+D1_wrangled %>%
+  select(artist, song, artist_clean, song_clean, join_key) %>%
+  distinct(join_key, .keep_all = TRUE) %>%
+  slice_head(n = 5) %>%
+  gt() %>%
+  tab_header(title = "D1 Join Key")
+```
+
+## D2 Join Key
+
+```{r join-key-d2-d3}
+D2_wrangled %>%
+  select(artist, song, artist_clean, song_clean, join_key) %>%
+  distinct(join_key, .keep_all = TRUE) %>%
+  slice_head(n = 5) %>%
+  gt() %>%
+  tab_header(title = "D2 Join Key")
+```
+
+## D3 Join Key
+
+```{r}
+D3_wrangled %>%
+  select(artist, song, artist_clean, song_clean, join_key) %>%
+  distinct(join_key, .keep_all = TRUE) %>%
+  slice_head(n = 5) %>%
+  gt() %>%
+  tab_header(title = "D3 Join Key")
+```
+
+# Part 5: Data join key overlap predication
+
+```{r}
+# Before the formal join, quickly verify key overlap across the three datasets
+# D1 unique join keys
+d1_keys <- D1_wrangled %>% distinct(join_key) %>% pull(join_key)
+d2_keys <- D2_wrangled %>% distinct(join_key) %>% pull(join_key)
+d3_keys <- D3_wrangled %>% distinct(join_key) %>% pull(join_key)
+
+d1_d2_overlap <- sum(d1_keys %in% d2_keys)
+d1_d3_overlap <- sum(d1_keys %in% d3_keys)
+
+cat("D1 unique keys:", length(d1_keys), "\n")
+cat("D2 unique keys:", length(d2_keys), "\n")
+cat("D3 unique keys:", length(d3_keys), "\n\n")
+
+cat("D1 ∩ D2 overlap:", d1_d2_overlap, "rows (",
+    round(d1_d2_overlap / length(d1_keys) * 100, 2), "% of D1)\n")
+cat("D1 ∩ D3 overlap:", d1_d3_overlap, "rows (",
+    round(d1_d3_overlap / length(d1_keys) * 100, 2), "% of D1)\n\n")
+```
+
+# Part 6 saveRDS
+
+```{r}
+saveRDS(D1_wrangled, "../Data/wrangled_D1.rds")
+saveRDS(D2_wrangled, "../Data/wrangled_D2.rds")
+saveRDS(D3_wrangled, "../Data/wrangled_D3.rds")
+```
+
+**Note** Due to formatting inconsistencies between D3 and the Billboard dataset, the exact match rate between D1 and D3 is approximately 10.6%. As a result, D3 is used primarily as a supplementary source for genre classification and lyrical sentiment analysis, rather than as a fully integrated dataset. Findings derived from the D1–D3 joined subset should be interpreted with caution given the limited coverage.

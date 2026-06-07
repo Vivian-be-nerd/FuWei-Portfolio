@@ -1,0 +1,1055 @@
+---
+title: "07 Final Report"
+author: "Fu Wei Hsu"
+date: last-modified
+format:
+  html:
+    toc: true
+    toc-location: right
+    toc-title: "Contents"
+    toc-depth: 2
+    toc-expand: true
+    code-fold: true
+    echo: false
+    warning: false
+    message: false
+    embed-resources: true
+    theme: cosmo
+editor: visual
+---
+
+
+```{r setup}
+library(tidyverse)
+library(janitor)
+library(gt)
+library(ggnewscale)
+library(caret)
+library(randomForest)
+library(pROC)
+library(broom)
+
+# Load pre-computed datasets
+D1_D2_D3_joined <- readRDS("../Data/D1_D2_D3_joined.rds")
+analysis_base   <- readRDS("../Data/analysis_base.rds")
+D2_model        <- readRDS("../Data/wrangled_D2.rds") %>%
+  mutate(target = as.factor(target)) %>%
+  select(target, danceability, energy, loudness,
+         speechiness, acousticness, instrumentalness,
+         liveness, valence, tempo, duration_ms) %>%
+  drop_na()
+```
+
+**Note:**
+Data preprocessing was performed using **Tidyverse** and **Janitor**. 
+Explanatory classification models were built using **Caret** and **RandomForest**, 
+with model performance assessed via AUC using **pROC**.
+
+
+# 1. Introduction
+
+Popular music is more than entertainment — it is a mirror of its time, reflecting the cultural, social, and technological shifts of each era. Over the past six decades, the Billboard Hot 100 has served as the definitive barometer of American musical taste, capturing the rise and fall of genres, the evolution of sound, and the changing emotional landscape of popular culture.
+
+This study analyzes **330,087 weekly chart records** spanning from **1960 to 2019**, combining Billboard chart data with Spotify audio features to explore what defines a "hit" — and how that definition has changed over time.
+
+## Research Questions
+
+This analysis addresses four core research questions:
+
+- **RQ1:** How has the genre distribution of Billboard Hot 100 songs changed across decades?
+- **RQ2:** How have the emotional dimensions of popular music evolved across six decades, and what cultural and technological shifts might explain these changes?
+- **RQ3:** Does the rise of speechiness in popular music reflect the mainstreaming of Hip-Hop?
+- **RQ4:** Which audio features are most strongly associated with a song's chart performance?
+
+---
+
+# 2. Data & Methodology
+
+## 2.1 Datasets
+
+This study integrates three complementary datasets:
+
+| Dataset | Source | Records | Role |
+|:---|:---|:---:|:---|
+| Billboard Hot 100 | Kaggle (dhruvildave) | 330,087 | Primary anchor — weekly chart records |
+| Spotify Hit Predictor | Kaggle (theoverman) | 41,106 | Audio features + Hit/Flop labels |
+| Music Dataset 1950–2019 | Kaggle (saurabhshahane) | 28,372 | Genre classification + lyrical sentiment |
+
+## 2.2 Data Processing
+
+```{r dataset-summary}
+# Dataset join summary
+tibble(
+  Dataset   = c("D1 (Billboard)", "D2 (Spotify)", "D3 (Music Dataset)"),
+  Records   = c(330087, 41106, 28372),
+  `Matched to D1` = c("100%", "80.12%", "13.94%")
+) %>%
+  gt() %>%
+  tab_header(
+    title    = "Dataset Overview and Match Rates",
+    subtitle = "After standardized join key cleaning and matching"
+  ) %>%
+  fmt_number(columns = Records, decimals = 0, use_seps = TRUE) %>%
+  cols_label(
+    Dataset        = "Dataset",
+    Records        = "Total Records",
+    `Matched to D1` = "Match Rate with D1"
+  )
+```
+
+The three datasets were joined using a standardized key of the format `artist|song` (e.g., `drake|gods plan`), created after cleaning artist and track names — removing featuring credits, version markers, and bracket annotations. The final analysis dataset contains **`r nrow(analysis_base)` records** covering 1960–2019.
+
+## 2.3 Analytical Approach
+
+- **RQ1–RQ3:** Exploratory Data Analysis (EDA) using trend visualization across six decades
+- **RQ4:** Binary classification modeling (Logistic Regression + Random Forest) using Spotify audio features
+- **Analysis scope:** U.S. market only; limited to 1960–2019 to ensure consistent data coverage across all three datasets
+
+> **Note on D3 coverage:** The Music Dataset (D3) matched only 13.94% of Billboard records. Genre and lyrical analyses based on D3 are therefore treated as supplementary and interpreted with caution.
+
+> **Technical Note:** This report was produced using R. Data preprocessing 
+> was performed with Tidyverse and Janitor. Classification models 
+> (Logistic Regression and Random Forest) were implemented using Caret 
+> and RandomForest, with AUC-based evaluation via pROC. All visualizations 
+> were created with ggplot2.
+
+
+# 3. Results
+
+## 3.1 RQ1: Genre Distribution Across Decades
+
+Pop music has consistently dominated the Billboard Hot 100 across all six decades, rising from **61.4%** in the 1960s to **78.4%** in the 2010s. In the early 1960s, Blues and Country still held notable shares, but both declined significantly over time. Rock emerged as a major force in the 1970s–1980s, peaking at 26–34%, before declining sharply to just **4.3%** by the 2010s. Blues and Jazz, which accounted for 15% and 6% respectively in the 1960s, have nearly disappeared from mainstream charts by the 2010s. Hip-Hop shows modest growth from the 1990s onward, reaching a peak of **7.6%**, while Country has seen a moderate resurgence in recent decades.
+
+> **Note on classification:** It is important to note that the boundary between Pop and Hip-Hop in D3's classification may not be precise. Many contemporary Hip-Hop tracks — characterized by rap vocals and spoken-word delivery — may have been classified as Pop due to their mainstream production style. As a result, Hip-Hop's actual influence on the charts may be underrepresented. This limitation will be further explored in RQ3 through the lens of speechiness.
+
+```{r rq1-setup, include=FALSE}
+# RQ1 data preparation
+genre_base <- analysis_base %>%
+  filter(!is.na(genre))
+
+genre_decade <- genre_base %>%
+  count(decade, genre) %>%
+  group_by(decade) %>%
+  mutate(pct = round(n / sum(n) * 100, 2)) %>%
+  ungroup()
+```
+
+```{r rq1-table}
+# Genre distribution table
+genre_decade %>%
+  select(decade, genre, pct) %>%
+  pivot_wider(names_from = decade, values_from = pct, values_fill = 0) %>%
+  gt() %>%
+  tab_header(
+    title    = "Genre Distribution (%) by Decade",
+    subtitle = "Based on D1–D3 matched subset (13.94% coverage)"
+  ) %>%
+  fmt_number(columns = -genre, decimals = 1) %>%
+  cols_label(genre = "Genre") %>%
+  tab_source_note("Source: Billboard Hot 100 × Music Dataset 1950–2019")
+```
+
+```{r rq1-stacked, fig.width = 10, fig.height = 6}
+# Stacked bar chart
+genre_decade %>%
+  ggplot(aes(x = decade, y = pct, fill = genre)) +
+  geom_col(position = "stack") +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    title    = "Genre Distribution of Billboard Hot 100 by Decade",
+    subtitle = "Based on D1–D3 matched subset (1960s–2010s)",
+    x        = "Decade",
+    y        = "Percentage (%)",
+    fill     = "Genre",
+    caption  = "Source: Billboard Hot 100 × Music Dataset 1950–2019"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10, color = "gray40"),
+    legend.position = "right"
+  )
+```
+
+```{r rq1-line, fig.width = 10, fig.height = 6}
+# Line chart
+genre_decade %>%
+  ggplot(aes(x = decade, y = pct, color = genre, group = genre)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2.5) +
+  scale_color_brewer(palette = "Set2") +
+  labs(
+    title    = "Genre Trend on Billboard Hot 100 (1960s–2010s)",
+    subtitle = "Percentage of chart appearances per decade",
+    x        = "Decade",
+    y        = "Percentage (%)",
+    color    = "Genre",
+    caption  = "Source: Billboard Hot 100 × Music Dataset 1950–2019"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10, color = "gray40"),
+    legend.position = "right"
+  )
+```
+
+**Key Findings:**
+
+- **Pop dominance** — Rose from 61.4% (1960s) to 78.4% (2010s), consistently the most dominant genre
+- **Rock's rise and fall** — Peaked at 34.3% in the 1980s, declined to 4.3% by the 2010s
+- **Blues and Jazz** — Nearly disappeared from mainstream charts by the 2000s
+- **Country resurgence** — After declining in the 1980s–1990s, Country recovered to ~15% in the 2000s–2010s
+- **Hip-Hop underrepresentation** — Peaked at 7.6% (1990s) but likely understated due to genre classification limitations
+
+
+## 3.2 RQ2: Emotional Evolution of Popular Music
+
+Analysis of five Spotify audio features across six decades reveals a consistent and multi-dimensional emotional transformation in popular music. Rather than simply becoming "sadder," modern music has evolved into a more complex emotional landscape — darker in mood, yet more intense and energetic.
+
+This evolution can be understood across three distinct phases, each shaped by the dominant musical styles and cultural forces of its time.
+
+**Phase 1 — The Disco Era (1960–1979):** Music was characterized by high valence and low energy. The optimism of the Civil Rights era, the counterculture movement, and the rise of Disco in the late 1970s produced chart music that was predominantly upbeat and joyful. Artists such as The Beatles, Marvin Gaye, Donna Summer, and ABBA defined this era's emotional tone.
+
+**Phase 2 — Post-Disco & Rock Era (1980–1999):** The collapse of Disco in 1979 marked the first major turning point. MTV's launch in 1981 transformed music into a visual medium, while Hard Rock, Heavy Metal, and Grunge brought darker, more intense emotional content. The AIDS crisis, political polarization, and economic anxiety of the 1980s–1990s contributed to a cultural shift away from collective optimism. Artists such as Michael Jackson, Nirvana, and Tupac Shakur captured the tensions of this era.
+
+**Phase 3 — Hip-Hop & Digital Era (2000–2019):** The digital revolution — from Napster (1999) to Spotify (2008) — fundamentally reshaped how music was created, distributed, and consumed. Hip-Hop became the dominant genre, and the rise of Emo Rap in the 2010s pushed valence to historic lows. Social media amplified emotional expression and anxiety, while artists such as Drake, Travis Scott, and Billie Eilish defined an era of introspective, high-intensity music.
+
+```{r rq2-setup, include=FALSE}
+# Data preparation
+valence_yearly <- analysis_base %>%
+  group_by(year) %>%
+  summarise(
+    avg_valence = mean(valence, na.rm = TRUE),
+    n = n()
+  ) %>%
+  ungroup()
+
+features_yearly <- analysis_base %>%
+  group_by(year) %>%
+  summarise(
+    valence      = mean(valence,      na.rm = TRUE),
+    energy       = mean(energy,       na.rm = TRUE),
+    danceability = mean(danceability, na.rm = TRUE),
+    acousticness = mean(acousticness, na.rm = TRUE),
+    speechiness  = mean(speechiness,  na.rm = TRUE)
+  ) %>%
+  pivot_longer(
+    cols      = c(valence, energy, danceability, acousticness, speechiness),
+    names_to  = "feature",
+    values_to = "score"
+  ) %>%
+  mutate(feature = factor(feature, levels = c(
+    "valence", "energy", "danceability", "acousticness", "speechiness"
+  )))
+
+valence_energy <- features_yearly %>%
+  filter(feature %in% c("valence", "energy"))
+```
+
+```{r rq2-five-features, fig.width = 14, fig.height = 6}
+# Five audio features overview
+ggplot(features_yearly, aes(x = year, y = score, color = feature)) +
+  annotate("rect", xmin = 1960, xmax = 1979, ymin = -Inf, ymax = Inf,
+           fill = "#FFD700", alpha = 0.06) +
+  annotate("rect", xmin = 1980, xmax = 1999, ymin = -Inf, ymax = Inf,
+           fill = "#FF6B6B", alpha = 0.06) +
+  annotate("rect", xmin = 2000, xmax = 2019, ymin = -Inf, ymax = Inf,
+           fill = "#4A90D9", alpha = 0.06) +
+  annotate("text", x = 1969, y = 0.90, label = "Phase 1\nDisco Era",
+           size = 4, color = "#B8860B", fontface = "bold") +
+  annotate("text", x = 1989, y = 0.90, label = "Phase 2\nPost-Disco & Rock",
+           size = 4, color = "#CC0000", fontface = "bold") +
+  annotate("text", x = 2009, y = 0.90, label = "Phase 3\nHip-Hop & Digital",
+           size = 4, color = "#1A5276", fontface = "bold") +
+  geom_vline(xintercept = 1980, linetype = "solid", linewidth = 0.6,
+             color = "gray50", alpha = 0.5) +
+  geom_vline(xintercept = 2000, linetype = "solid", linewidth = 0.6,
+             color = "gray50", alpha = 0.5) +
+  geom_line(linewidth = 0.8, alpha = 0.85) +
+  geom_point(size = 1.5, alpha = 0.85) +
+  scale_color_manual(
+    values = c(
+      "valence"      = "#E74C3C",
+      "energy"       = "#F39C12",
+      "danceability" = "#27AE60",
+      "acousticness" = "#8E44AD",
+      "speechiness"  = "#2980B9"
+    ),
+    labels = c(
+      "valence"      = "Valence (Positivity)",
+      "energy"       = "Energy",
+      "danceability" = "Danceability",
+      "acousticness" = "Acousticness",
+      "speechiness"  = "Speechiness"
+    )
+  ) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(
+    title    = "Audio Feature Trends on Billboard Hot 100 (1960–2019)",
+    subtitle = "Five Spotify audio features across three eras of popular music",
+    x = "Year", y = "Average Score (0–1)", color = "Audio Feature",
+    caption  = "Source: Billboard Hot 100 × Spotify Hit Predictor"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10, color = "gray40"),
+    legend.position = "right"
+  )
+```
+
+The most striking finding is the **divergence between Valence and Energy** — as music became emotionally darker, it simultaneously became more intense and powerful. This suggests that modern popular music is not "sad and weak," but rather "angry and forceful."
+
+```{r rq2-divergence, fig.width = 14, fig.height = 6}
+# Valence vs Energy divergence
+ggplot(valence_energy, aes(x = year, y = score, color = feature)) +
+  annotate("rect", xmin = 1960, xmax = 1979, ymin = -Inf, ymax = Inf,
+           fill = "#FFD700", alpha = 0.06) +
+  annotate("rect", xmin = 1980, xmax = 1999, ymin = -Inf, ymax = Inf,
+           fill = "#FF6B6B", alpha = 0.06) +
+  annotate("rect", xmin = 2000, xmax = 2019, ymin = -Inf, ymax = Inf,
+           fill = "#4A90D9", alpha = 0.06) +
+  geom_vline(xintercept = 1980, linetype = "solid", linewidth = 0.6,
+             color = "gray50", alpha = 0.5) +
+  geom_vline(xintercept = 2000, linetype = "solid", linewidth = 0.6,
+             color = "gray50", alpha = 0.5) +
+  annotate("text", x = 1993, y = 0.55,
+           label = "Valence & Energy\nbegin to diverge",
+           size = 3, color = "gray30", fontface = "italic") +
+  annotate("segment", x = 1993, xend = 1993, y = 0.58, yend = 0.62,
+           arrow = arrow(length = unit(0.2, "cm")), color = "gray30") +
+  geom_line(linewidth = 1, alpha = 0.9) +
+  geom_point(size = 1.8, alpha = 0.9) +
+  scale_color_manual(
+    values = c("valence" = "#E74C3C", "energy" = "#F39C12"),
+    labels = c("valence" = "Valence (Positivity)",
+               "energy"  = "Energy (Intensity)")
+  ) +
+  annotate("text", x = 2020, y = 0.49, label = "Valence\n0.49",
+           size = 3, color = "#E74C3C", fontface = "bold") +
+  annotate("text", x = 2020, y = 0.73, label = "Energy\n0.73",
+           size = 3, color = "#F39C12", fontface = "bold") +
+  labs(
+    title    = "Valence vs. Energy: The Divergence of Popular Music (1960–2019)",
+    subtitle = "Music has become darker in mood (↓ Valence) yet more intense in energy (↑ Energy)",
+    x = "Year", y = "Average Score (0–1)", color = "Audio Feature",
+    caption  = "Source: Billboard Hot 100 × Spotify Hit Predictor"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10, color = "gray40"),
+    legend.position = "bottom"
+  )
+```
+
+```{r rq2-decade-table}
+# Decade comparison table
+analysis_base %>%
+  group_by(decade) %>%
+  summarise(
+    Valence      = round(mean(valence,      na.rm = TRUE), 3),
+    Energy       = round(mean(energy,       na.rm = TRUE), 3),
+    Danceability = round(mean(danceability, na.rm = TRUE), 3),
+    Acousticness = round(mean(acousticness, na.rm = TRUE), 3),
+    Speechiness  = round(mean(speechiness,  na.rm = TRUE), 3)
+  ) %>%
+  gt() %>%
+  tab_header(
+    title    = "Average Audio Features by Decade",
+    subtitle = "Billboard Hot 100 (1960s–2010s)"
+  ) %>%
+  cols_label(decade = "Decade") %>%
+  data_color(
+    columns = c(Valence, Energy, Danceability, Acousticness, Speechiness),
+    palette = "RdYlGn", alpha = 0.7
+  ) %>%
+  tab_source_note("Source: Billboard Hot 100 × Spotify Hit Predictor")
+```
+
+
+### Figure A: Sociopolitical Context
+
+```{r, fig.width = 14, fig.height = 6}
+library(tidyverse)
+
+# Define Historical Events
+events_ve <- tribble(
+  ~year, ~label,                 ~color,        ~y_pos,
+  1964,  "Vietnam War\nBegins",  "red",         0.730,
+  1975,  "Vietnam War\nEnds",    "red",         0.695,
+  1981,  "AIDS\nCrisis",         "purple",      0.730,
+  1991,  "Gulf War",             "brown",       0.695,
+  2001,  "9/11\nAttacks",        "darkorange",  0.730,
+  2006,  "Facebook\nLaunch",     "royalblue",   0.695,
+  2008,  "Financial\nCrisis",    "darkblue",    0.730,
+  2008,  "Facebook\n100M Users", "royalblue",   0.660,
+  2010,  "Instagram\nLaunch",    "deeppink",    0.695,
+  2013,  "BLM\nMovement",        "darkgreen",   0.730,
+  2016,  "U.S.\nElection",       "darkred",     0.660,
+  2017,  "#MeToo\nMovement",     "hotpink",     0.695
+)
+
+# Plotting
+ggplot(valence_energy, aes(x = year, y = score, color = feature)) +
+  # Phase Background Shading
+  annotate("rect", xmin = 1960, xmax = 1979, ymin = -Inf, ymax = Inf, fill = "#FFD700", alpha = 0.06) +
+  annotate("rect", xmin = 1980, xmax = 1999, ymin = -Inf, ymax = Inf, fill = "#FF6B6B", alpha = 0.06) +
+  annotate("rect", xmin = 2000, xmax = 2019, ymin = -Inf, ymax = Inf, fill = "#4A90D9", alpha = 0.06) +
+  
+  # Event Background Highlights
+  annotate("rect", xmin = 2006, xmax = 2008, ymin = -Inf, ymax = Inf, fill = "royalblue", alpha = 0.07) +
+  annotate("rect", xmin = 2001, xmax = 2003, ymin = -Inf, ymax = Inf, fill = "orange", alpha = 0.08) +
+  annotate("rect", xmin = 1964, xmax = 1975, ymin = -Inf, ymax = Inf, fill = "red", alpha = 0.06) +
+  annotate("rect", xmin = 2016, xmax = 2019, ymin = -Inf, ymax = Inf, fill = "darkred", alpha = 0.05) +
+  
+  # Vertical Lines for Historical Events
+  geom_vline(data = events_ve, aes(xintercept = year), 
+             color = "gray60", linetype = "dashed", linewidth = 0.4, alpha = 0.6) +
+  
+  # Event Labels
+  geom_text(data = events_ve, aes(x = year, y = y_pos, label = label), 
+            color = "gray35", size = 2.3, fontface = "bold", hjust = -0.1) +
+  
+  # Phase Separators
+  geom_vline(xintercept = 1980, linetype = "solid", linewidth = 0.6, color = "gray50", alpha = 0.5) +
+  geom_vline(xintercept = 2000, linetype = "solid", linewidth = 0.6, color = "gray50", alpha = 0.5) +
+  
+  # Trend Lines
+  geom_line(linewidth = 1.1, alpha = 0.95) +
+  geom_point(size = 1.8, alpha = 0.95) +
+  
+  # Divergence Annotation
+  annotate("text", x = 1993, y = 0.63, label = "Valence & Energy\nbegin to diverge", 
+           size = 2.8, color = "gray30", fontface = "italic") +
+  annotate("segment", x = 1993, xend = 1993, y = 0.615, yend = 0.585, 
+           arrow = arrow(length = unit(0.2, "cm")), color = "gray30") +
+  
+  # Custom Colors
+  scale_color_manual(
+    values = c("valence" = "#E74C3C", "energy" = "#F39C12"),
+    labels = c("valence" = "Valence (Positivity ↓)", "energy" = "Energy (Intensity ↑)")
+  ) +
+  
+  # Endpoint Value Labels
+  annotate("text", x = 2020, y = 0.49, label = "Valence\n0.49", size = 3, color = "#E74C3C", fontface = "bold") +
+  annotate("text", x = 2020, y = 0.73, label = "Energy\n0.73", size = 3, color = "#F39C12", fontface = "bold") +
+  
+  # Labs and Theme
+  labs(
+    title    = "Valence vs Energy: The Divergence of Popular Music (1960–2019)",
+    subtitle = "Music became darker in mood (↓ Valence) yet more intense in energy (↑ Energy) | Key U.S. events marked",
+    x        = "Year",
+    y        = "Average Score (0–1)",
+    color    = "Audio Feature",
+    caption  = "Source: Billboard Hot 100 × Spotify Hit Predictor"
+  ) +
+  scale_x_continuous(breaks = seq(1960, 2020, by = 10)) +
+  theme_minimal() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 9, color = "gray40"),
+    legend.position = "bottom"
+  )
+```
+
+### Figure B: Music Technology Evolution
+
+```{r, fig.width = 14, fig.height = 6}
+# ── Define Music Technology Events ──────────────────────
+events_tech <- tribble(
+  ~year, ~label,                         ~y_pos,
+  1982,  "CD\nLaunches",                0.730,
+  1999,  "Napster\nLaunches",           0.695,
+  2001,  "iPod\nLaunches",              0.730,
+  2003,  "iTunes\nStore Opens",         0.695,
+  2008,  "Spotify\nFounded",            0.730,
+  2011,  "Spotify\nEnters US",          0.695,
+  2015,  "Streaming\nDominates Market", 0.730
+)
+
+ggplot(valence_energy, aes(x = year, y = score, color = feature)) +
+  # Three-phase background color blocks
+  annotate("rect", xmin = 1960, xmax = 1979, ymin = -Inf, ymax = Inf, fill = "#FFD700", alpha = 0.06) +
+  annotate("rect", xmin = 1980, xmax = 1999, ymin = -Inf, ymax = Inf, fill = "#FF6B6B", alpha = 0.06) +
+  annotate("rect", xmin = 2000, xmax = 2019, ymin = -Inf, ymax = Inf, fill = "#4A90D9", alpha = 0.06) +
+  
+  # Digital Era background (1999–2015)
+  annotate("rect", xmin = 1999, xmax = 2015, ymin = -Inf, ymax = Inf, fill = "#2ECC71", alpha = 0.05) +
+  
+  # Streaming Era background (2015–2019)
+  annotate("rect", xmin = 2015, xmax = 2019, ymin = -Inf, ymax = Inf, fill = "#1DB954", alpha = 0.08) +
+  
+  # Tech event vertical lines
+  geom_vline(data = events_tech, aes(xintercept = year), color = "gray50", linetype = "dashed", linewidth = 0.4, alpha = 0.7) +
+  
+  # Tech event text labels
+  geom_text(data = events_tech, aes(x = year, y = y_pos, label = label), color = "gray30", size = 2.3, fontface = "bold", hjust = -0.1) +
+  
+  # Phase separators
+  geom_vline(xintercept = 1980, linetype = "solid", linewidth = 0.6, color = "gray50", alpha = 0.5) +
+  geom_vline(xintercept = 2000, linetype = "solid", linewidth = 0.6, color = "gray50", alpha = 0.5) +
+  
+  # Main trend lines
+  geom_line(linewidth = 1.1, alpha = 0.95) +
+  geom_point(size = 1.8, alpha = 0.95) +
+  
+  # Divergence annotation
+  annotate("text", x = 1993, y = 0.63, label = "Valence & Energy\nbegin to diverge", size = 2.8, color = "gray30", fontface = "italic") +
+  annotate("segment", x = 1993, xend = 1993, y = 0.615, yend = 0.585, arrow = arrow(length = unit(0.2, "cm")), color = "gray30") +
+  
+  # Colors and Legend Labels
+  scale_color_manual(
+    values = c("valence" = "#E74C3C", "energy" = "#F39C12"),
+    labels = c("valence" = "Valence (Positivity ↓)", "energy" = "Energy (Intensity ↑)")
+  ) +
+  
+  # Endpoint score labels
+  annotate("text", x = 2020, y = 0.49, label = "Valence\n0.49", size = 3, color = "#E74C3C", fontface = "bold") +
+  annotate("text", x = 2020, y = 0.73, label = "Energy\n0.73", size = 3, color = "#F39C12", fontface = "bold") +
+  
+  # Era-specific labels
+  annotate("text", x = 2007, y = 0.455, label = "Digital Music Era", size = 3, color = "#27AE60", fontface = "bold") +
+  annotate("text", x = 2017, y = 0.455, label = "Streaming Era", size = 2.8, color = "#1DB954", fontface = "bold") +
+  
+  # Labs and Formatting
+  labs(
+    title    = "Valence vs Energy: The Impact of Music Consumption Technology (1960–2019)",
+    subtitle = "From vinyl to streaming — how technology reshaped the emotional landscape of popular music",
+    x        = "Year",
+    y        = "Average Score (0–1)",
+    color    = "Audio Feature",
+    caption  = "Source: Billboard Hot 100 × Spotify Hit Predictor"
+  ) +
+  scale_x_continuous(breaks = seq(1960, 2020, by = 10)) +
+  theme_minimal() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 9, color = "gray40"),
+    legend.position = "bottom"
+  )
+```
+
+**Key Findings:**
+
+- **Valence ↓** — Declined 25.1% from ~0.67 (1960s) to ~0.502 (2010s)
+- **Energy ↑** — Rose consistently across all three phases
+- **Acousticness ↓** — Fell sharply from ~0.53 (1960s) to ~0.16 (2000s), reflecting the shift from acoustic instruments to electronic production
+- **Danceability ↑** — Increased with the rise of EDM and Hip-Hop
+- **Speechiness ↑** — Grew steadily, reflecting Hip-Hop's mainstreaming (explored further in RQ3)
+
+> Modern popular music is not simply sadder — it is angrier, more energetic, and more danceable, yet emotionally darker. This shift may reflect a cultural transition from collective joy toward individual expression of frustration and resilience.
+
+
+## 3.3 RQ3: Speechiness and the Mainstreaming of Hip-Hop
+
+The rise of speechiness on the Billboard Hot 100 over six decades provides a measurable signal of Hip-Hop's growing influence on mainstream music. Speechiness — Spotify's measure of the spoken-word quality of a track — increased by **103%** from the 1960s (0.049) to the 2010s (0.099), representing one of the most dramatic structural shifts in popular music's sonic profile.
+
+This trend aligns closely with Hip-Hop's cultural trajectory: from an underground subculture in the late 1970s, through its Golden Age in the late 1980s–early 1990s, to its emergence as the dominant force in mainstream music by the 2000s–2010s.
+
+```{r rq3-setup, include=FALSE}
+# Data preparation
+speechiness_yearly <- analysis_base %>%
+  group_by(year) %>%
+  summarise(
+    avg_speechiness = mean(speechiness, na.rm = TRUE),
+    n = n()
+  ) %>%
+  ungroup()
+
+speechiness_decade <- analysis_base %>%
+  group_by(decade) %>%
+  summarise(
+    avg_speechiness = round(mean(speechiness, na.rm = TRUE), 4),
+    n = n()
+  )
+
+genre_speech <- analysis_base %>%
+  filter(!is.na(genre)) %>%
+  group_by(genre) %>%
+  summarise(
+    avg_speechiness = round(mean(speechiness, na.rm = TRUE), 4),
+    n = n()
+  ) %>%
+  arrange(desc(avg_speechiness))
+```
+
+```{r rq3-trend, fig.width = 14, fig.height = 6}
+# Speechiness long-term trend
+ggplot(speechiness_yearly, aes(x = year, y = avg_speechiness)) +
+  annotate("rect", xmin = 1960, xmax = 1979, ymin = -Inf, ymax = Inf,
+           fill = "#FFD700", alpha = 0.06) +
+  annotate("rect", xmin = 1980, xmax = 1999, ymin = -Inf, ymax = Inf,
+           fill = "#FF6B6B", alpha = 0.06) +
+  annotate("rect", xmin = 2000, xmax = 2019, ymin = -Inf, ymax = Inf,
+           fill = "#4A90D9", alpha = 0.06) +
+  annotate("text", x = 1969, y = 0.028, label = "Phase 1\nPre-Rap Era",
+           size = 3, color = "#B8860B", fontface = "bold") +
+  annotate("text", x = 1989, y = 0.028, label = "Phase 2\nHip-Hop Emerges",
+           size = 3, color = "#CC0000", fontface = "bold") +
+  annotate("text", x = 2009, y = 0.028, label = "Phase 3\nHip-Hop Dominates",
+           size = 3, color = "#1A5276", fontface = "bold") +
+  annotate("rect", xmin = 1988, xmax = 1992, ymin = -Inf, ymax = Inf,
+           fill = "purple", alpha = 0.06) +
+  annotate("text", x = 1990, y = 0.120, label = "Golden Age\nof Hip-Hop",
+           size = 2.8, color = "purple", fontface = "bold") +
+  geom_vline(xintercept = 1980, linetype = "solid", linewidth = 0.6,
+             color = "gray50", alpha = 0.5) +
+  geom_vline(xintercept = 2000, linetype = "solid", linewidth = 0.6,
+             color = "gray50", alpha = 0.5) +
+  geom_line(color = "#8E44AD", linewidth = 0.9) +
+  geom_point(color = "#8E44AD", size = 1.8) +
+  annotate("text",
+           x = 2020,
+           y = speechiness_yearly %>% filter(year == 2019) %>%
+               pull(avg_speechiness),
+           label = paste0("2019\n",
+             round(speechiness_yearly %>% filter(year == 2019) %>%
+                   pull(avg_speechiness), 3)),
+           size = 3, color = "#8E44AD", fontface = "bold") +
+  labs(
+    title    = "Average Speechiness of Billboard Hot 100 Songs (1960–2019)",
+    subtitle = "Rising speechiness reflects the growing influence of Hip-Hop on mainstream music",
+    x = "Year",
+    y = "Average Speechiness (0 = No Speech, 1 = All Speech)",
+    caption  = "Source: Billboard Hot 100 × Spotify Hit Predictor"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10, color = "gray40")
+  )
+```
+
+Genre-level analysis confirms that Hip-Hop's speechiness is dramatically higher than all other genres — more than **3.6 times** the average of all other genres combined.
+
+```{r rq3-genre-bar, fig.width = 10, fig.height = 5}
+# Genre speechiness bar chart
+genre_speech %>%
+  mutate(
+    genre     = fct_reorder(genre, avg_speechiness),
+    is_hiphop = genre == "hip hop"
+  ) %>%
+  ggplot(aes(x = genre, y = avg_speechiness, fill = is_hiphop)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = avg_speechiness),
+            hjust = -0.2, size = 3.5, fontface = "bold") +
+  scale_fill_manual(values = c("TRUE" = "#8E44AD", "FALSE" = "#BDC3C7")) +
+  coord_flip() +
+  labs(
+    title    = "Average Speechiness by Genre",
+    subtitle = "Hip-Hop shows significantly higher speechiness than all other genres",
+    x = "Genre", y = "Average Speechiness",
+    caption  = "Source: Billboard Hot 100 × Music Dataset 1950–2019"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10, color = "gray40")
+  )
+```
+
+```{r rq3-hiphop-vs-others, fig.width = 10, fig.height = 5}
+# Hip-Hop vs Other Genres by decade
+analysis_base %>%
+  filter(!is.na(genre)) %>%
+  mutate(is_hiphop = ifelse(genre == "hip hop",
+                            "Hip-Hop", "Other Genres")) %>%
+  group_by(decade, is_hiphop) %>%
+  summarise(
+    avg_speechiness = round(mean(speechiness, na.rm = TRUE), 4),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = decade, y = avg_speechiness, fill = is_hiphop)) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = avg_speechiness),
+            position = position_dodge(width = 0.9),
+            vjust = -0.5, size = 3) +
+  scale_fill_manual(values = c(
+    "Hip-Hop"      = "#8E44AD",
+    "Other Genres" = "#BDC3C7"
+  )) +
+  labs(
+    title    = "Speechiness: Hip-Hop vs Other Genres by Decade",
+    subtitle = "Hip-Hop consistently shows higher speechiness across all decades",
+    x = "Decade", y = "Average Speechiness", fill = "Genre Group",
+    caption  = "Source: Billboard Hot 100 × Music Dataset 1950–2019"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title      = element_text(face = "bold", size = 14),
+    plot.subtitle   = element_text(size = 10, color = "gray40"),
+    legend.position = "bottom"
+  )
+```
+
+**Key Findings:**
+
+- Speechiness grew **103%** from the 1960s (0.0489) to the 2010s (0.0993)
+- Hip-Hop's average speechiness (0.233) is **3.6×** higher than all other genres combined (~0.065)
+- The sharpest increase occurred between the 1980s and 1990s, coinciding with Hip-Hop's Golden Age (1988–1992)
+- Hip-Hop has consistently maintained the highest speechiness across every decade tracked
+
+
+> The rise of speechiness on the Billboard Hot 100 is strongly associated with Hip-Hop's growing sonic influence on mainstream music. While genre classification data suggests Hip-Hop peaked at only 7.6% of chart appearances in the 1990s — and has since declined to 1.1% in the 2010s — this is likely a significant underestimate due to classification limitations. As Hip-Hop's production style converged with mainstream Pop, many Hip-Hop-influenced tracks were labeled as Pop rather than Hip-Hop. Speechiness provides a more objective, algorithm-based measure of Hip-Hop's true sonic impact. Hip-Hop's average speechiness (0.233) is 3.6× higher than all other genres combined (~0.065), and it has consistently dominated every decade since the 1980s. As Hip-Hop's sonic characteristics permeated the mainstream, the spoken-word quality of chart-topping hits grew by 103% from the 1960s to the 2010s — reflecting a broader cultural shift toward lyrical density and rhythmic delivery that transcends genre labels.
+
+
+**Limitation:** 
+
+The Speechiness trend analysis is based on D2 (Spotify), which covers 80% of Billboard records and is considered reliable. However, the genre-specific comparison 
+Hip-Hop vs. Other Genres) relies on the D3 subset, which covers only 13.94% of records. Some Hip-Hop tracks may also have been misclassified as Pop, 
+meaning Hip-Hop's true sonic influence may be even greater than observed here.
+
+
+
+## 3.4 RQ4: Audio Features and Chart Success
+
+To identify which audio features are most strongly associated with chart success, this study employs two binary classification models — Logistic Regression and Random Forest — using the Spotify Hit Predictor dataset (D2). The dataset contains **41,106 tracks** with a perfectly balanced 50/50 Hit/Flop distribution, eliminating the need for resampling.
+
+This analysis adopts an **explanatory** rather than predictive approach. The goal is to understand historical associations between audio features and chart success, not to build a system for predicting future hits.
+
+```{r rq4-setup, include=FALSE}
+# Rebuild models
+set.seed(42)
+
+train_index <- createDataPartition(D2_model$target, p = 0.8, list = FALSE)
+train_data  <- D2_model[train_index, ]
+test_data   <- D2_model[-train_index, ]
+
+# Logistic Regression
+logistic_model <- glm(
+  target ~ danceability + energy + loudness +
+           speechiness + acousticness + instrumentalness +
+           liveness + valence + tempo + duration_ms,
+  data   = train_data,
+  family = binomial
+)
+
+# Predictions
+pred_prob  <- predict(logistic_model, newdata = test_data, type = "response")
+pred_class <- ifelse(pred_prob > 0.5, 1, 0) %>% as.factor()
+cm         <- confusionMatrix(pred_class, test_data$target, positive = "1")
+roc_obj    <- roc(as.numeric(test_data$target), as.numeric(pred_prob))
+
+# Random Forest
+rf_model <- randomForest(
+  target ~ danceability + energy + loudness +
+            speechiness + acousticness + instrumentalness +
+            liveness + valence + tempo + duration_ms,
+  data       = train_data,
+  ntree      = 500,
+  importance = TRUE
+)
+
+rf_pred_class <- predict(rf_model, newdata = test_data, type = "class")
+rf_pred_prob  <- predict(rf_model, newdata = test_data, type = "prob")[, 2]
+rf_cm         <- confusionMatrix(rf_pred_class, test_data$target, positive = "1")
+rf_roc        <- roc(as.numeric(test_data$target), as.numeric(rf_pred_prob))
+
+# Feature importance
+importance_df <- importance(rf_model) %>%
+  as.data.frame() %>%
+  rownames_to_column("feature") %>%
+  arrange(desc(MeanDecreaseAccuracy))
+```
+
+### Model Performance
+
+Both models demonstrated meaningful discriminative ability, with Random Forest outperforming Logistic Regression across all metrics.
+
+```{r rq4-comparison-table}
+# Model comparison table
+tibble(
+  Model       = c("Logistic Regression", "Random Forest"),
+  Accuracy    = c(round(cm$overall["Accuracy"], 4),
+                  round(rf_cm$overall["Accuracy"], 4)),
+  AUC         = c(round(auc(roc_obj), 4),
+                  round(auc(rf_roc), 4)),
+  Sensitivity = c(round(cm$byClass["Sensitivity"], 4),
+                  round(rf_cm$byClass["Sensitivity"], 4)),
+  Specificity = c(round(cm$byClass["Specificity"], 4),
+                  round(rf_cm$byClass["Specificity"], 4))
+) %>%
+  gt() %>%
+  tab_header(
+    title    = "Model Performance Comparison",
+    subtitle = "Logistic Regression vs Random Forest"
+  ) %>%
+  fmt_number(columns = c(Accuracy, AUC, Sensitivity, Specificity),
+             decimals = 4) %>%
+  data_color(columns = c(Accuracy, AUC), palette = "Greens") %>%
+  cols_label(
+    Model       = "Model",
+    Accuracy    = "Accuracy",
+    AUC         = "AUC",
+    Sensitivity = "Sensitivity (Hit)",
+    Specificity = "Specificity (Flop)"
+  ) %>%
+  tab_source_note("Source: Spotify Hit Predictor Dataset")
+```
+
+Random Forest's superior performance (AUC = 0.87 vs 0.80) suggests that the relationship between audio features and chart success involves **non-linear interactions** that Logistic Regression cannot fully capture.
+
+```{r rq4-roc, fig.width = 8, fig.height = 6}
+# ROC Curve comparison
+plot(roc_obj,
+     main = "ROC Curve Comparison: Logistic Regression vs Random Forest",
+     col  = "#E74C3C", lwd = 2)
+plot(rf_roc, add = TRUE, col = "#27AE60", lwd = 2)
+abline(a = 0, b = 1, lty = 2, col = "gray50")
+legend(
+  "bottomright",
+  legend = c(
+    paste("Logistic Regression (AUC =", round(auc(roc_obj), 4), ")"),
+    paste("Random Forest       (AUC =", round(auc(rf_roc),  4), ")")
+  ),
+  col = c("#E74C3C", "#27AE60"),
+  lwd = 2
+)
+```
+
+### Logistic Regression : Feature Coefficients
+
+```{r, fig.width = 10, fig.height = 6}
+# Coefficient Plot: Visualizing Direction and Magnitude 
+# Highlights significant features (p < 0.05)
+tidy(logistic_model) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(
+    term      = fct_reorder(term, estimate),
+    direction = ifelse(estimate > 0, "Positive", "Negative"),
+    significant = p.value < 0.05
+  ) %>%
+  ggplot(aes(x = term, y = estimate, fill = direction)) +
+  geom_col(aes(alpha = significant)) +
+  geom_errorbar(
+    aes(ymin = estimate - std.error,
+        ymax = estimate + std.error),
+    width = 0.3
+  ) +
+  scale_fill_manual(values = c(
+    "Positive" = "#27AE60",
+    "Negative" = "#E74C3C"
+  )) +
+  scale_alpha_manual(
+    values = c("TRUE" = 1, "FALSE" = 0.3),
+    guide  = "none"
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed",
+             color = "gray50") +
+  coord_flip() +
+  labs(
+    title    = "Logistic Regression: Feature Coefficients",
+    subtitle = "Green = positive association with Hit | Red = negative | Transparent = not significant",
+    x        = "Audio Feature",
+    y        = "Coefficient",
+    fill     = "Direction",
+    caption  = "Source: Spotify Hit Predictor Dataset"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 9, color = "gray40"),
+    legend.position = "bottom"
+  )
+
+```
+
+
+### Random Forest : Feature Importance Visualization
+
+```{r, fig.width = 13, fig.height = 6}
+# Feature Importance Bar Plot
+# Sorted by MeanDecreaseAccuracy
+# Longer bars represent features that are more important to the model
+importance_df %>%
+  mutate(feature = fct_reorder(feature, MeanDecreaseAccuracy)) %>%
+  ggplot(aes(x = feature, y = MeanDecreaseAccuracy)) +
+  geom_col(fill = "#27AE60", alpha = 0.85) +
+  geom_text(aes(label = round(MeanDecreaseAccuracy, 2)),
+            hjust = -0.2, size = 3.5, fontface = "bold") +
+  coord_flip() +
+  labs(
+    title    = "Random Forest: Feature Importance",
+    subtitle = "Mean Decrease in Accuracy when feature is removed",
+    x        = "Audio Feature",
+    y        = "Mean Decrease Accuracy",
+    caption  = "Source: Spotify Hit Predictor Dataset"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10, color = "gray40")
+  )
+
+```
+
+
+### Feature Importance Comparison
+
+```{r rq4-feature-comparison, fig.width = 12, fig.height = 6}
+# Feature importance comparison
+lr_importance <- tidy(logistic_model) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(
+    feature           = term,
+    importance        = abs(estimate),
+    importance_scaled = (importance - min(importance)) /
+                        (max(importance) - min(importance)),
+    model = "Logistic Regression"
+  ) %>%
+  select(feature, importance_scaled, model)
+
+rf_importance <- importance_df %>%
+  mutate(
+    importance        = MeanDecreaseAccuracy,
+    importance_scaled = (importance - min(importance)) /
+                        (max(importance) - min(importance)),
+    model = "Random Forest"
+  ) %>%
+  select(feature, importance_scaled, model)
+
+bind_rows(lr_importance, rf_importance) %>%
+  ggplot(aes(x = reorder(feature, importance_scaled),
+             y = importance_scaled, fill = model)) +
+  geom_col(position = "dodge", alpha = 0.85) +
+  scale_fill_manual(values = c(
+    "Logistic Regression" = "#E74C3C",
+    "Random Forest"       = "#27AE60"
+  )) +
+  coord_flip() +
+  labs(
+    title    = "Feature Importance Comparison",
+    subtitle = "Logistic Regression (scaled coefficients) vs Random Forest (Mean Decrease Accuracy)",
+    x = "Audio Feature", y = "Scaled Importance (0–1)", fill = "Model",
+    caption  = "Source: Spotify Hit Predictor Dataset"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 9, color = "gray40"),
+    legend.position = "bottom"
+  )
+```
+
+**Key Findings:**
+
+Both models consistently agree on the most important features:
+
+- **Instrumentalness ↓ (most important)** — Negatively associated with hits. Popular songs almost always feature vocals; high instrumentalness signals a non-mainstream track.
+- **Danceability ↑** — Positively associated with hits. Consistent with the dominance of Hip-Hop and EDM in the modern era.
+- **Speechiness ↑** — Positively associated with hits. Directly reflects Hip-Hop's mainstream influence, connecting back to RQ3.
+- **Acousticness ↓** — Negatively associated with hits. Electronic production has replaced acoustic instrumentation as the dominant sound.
+- **Energy** — Moderate importance, consistent with the Energy ↑ trend observed in RQ2.
+
+> **Interpreting both models together:** Random Forest identifies *which features matter most* (importance ranking), while Logistic Regression reveals *how they matter* (direction and magnitude). Together, they provide a complete picture of the audio feature landscape of chart success.
+
+**Key Takeaway:**
+
+> Audio features alone achieve an AUC of 0.87, suggesting that the sonic characteristics of a song are meaningfully associated with its commercial appeal. However, approximately **21% of cases remain unexplained** by audio features alone, highlighting the role of external factors such as marketing, artist reputation, and cultural timing.
+
+
+# 4. Limitations
+
+While this study provides meaningful insights into six decades of popular music evolution, several limitations should be considered when interpreting the findings.
+
+## 4.1 Dataset Coverage and Matching
+
+```{r limitations-table}
+tibble(
+  Limitation = c(
+    "D3 Genre Coverage",
+    "D2 Join Rate",
+    "Time Range"
+  ),
+  Description = c(
+    "D3 matched only 13.94% of Billboard records. Genre and lyrical analyses are based on a non-representative subset and may not reflect the full Billboard population.",
+    "D2 matched 80.12% of Billboard records. Approximately 20% of chart entries lack Spotify audio features, potentially introducing selection bias.",
+    "Analysis is limited to 1960–2019 to ensure consistent data coverage. Pre-1960 and post-2019 trends are not captured."
+  )
+) %>%
+  gt() %>%
+  tab_header(title = "Dataset Limitations") %>%
+  cols_label(
+    Limitation  = "Limitation",
+    Description = "Description"
+  ) %>%
+  cols_width(
+    Limitation  ~ px(180),
+    Description ~ px(500)
+  )
+```
+
+## 4.2 Genre Classification
+
+The Music Dataset (D3) provides only **7 broad genre categories**, which lack the granularity to distinguish sub-genres. In particular, many Hip-Hop tracks with mainstream production styles may have been classified as Pop, leading to an underrepresentation of Hip-Hop's actual influence in RQ1. The speechiness analysis in RQ3 was designed to partially compensate for this limitation.
+
+## 4.3 Modeling Assumptions
+
+**Temporal pooling:** The classification models in RQ4 were trained on data pooled across six decades. Given that the definition of a "hit" has evolved significantly over time — as demonstrated in RQ2 and RQ3 — feature importance may vary considerably by era. A decade-specific modeling approach could yield more nuanced findings but was beyond the scope of this study.
+
+**Label definition:** The Hit/Flop labels in D2 were defined by the dataset's original author and may not perfectly align with official Billboard chart performance. These labels should be interpreted as proxy indicators rather than ground truth.
+
+**Missing variables:** Critical non-musical factors — including marketing budgets, social media presence, artist reputation, and cultural timing — were not available in the datasets and could not be incorporated into the models. The unexplained variance (~21%) in RQ4 likely reflects these omitted factors.
+
+## 4.4 Spotify Audio Features
+
+Spotify's audio features (including Valence, Energy, and Speechiness) are algorithmically estimated from audio signals. They capture the **sonic** dimensions of music but do not directly measure lyrical content, cultural meaning, or listener perception. A song may sound musically positive (high Valence) while conveying negative lyrical themes, or vice versa. Interpretations of these features should therefore be treated as approximations rather than definitive emotional measurements.
+
+---
+
+# 5. Conclusion
+
+This study analyzed **330,087 weekly chart records** from the Billboard Hot 100 (1960–2019), integrated with Spotify audio features and genre classifications, to explore how popular music has evolved over six decades — and what defines a hit.
+
+## Summary of Findings
+
+```{r conclusion-table}
+tibble(
+  RQ = c("RQ1", "RQ2", "RQ3", "RQ4"),
+  Question = c(
+    "How has genre distribution changed across decades?",
+    "How have emotional dimensions of music evolved?",
+    "Does speechiness rise reflect Hip-Hop mainstreaming?",
+    "Which audio features are associated with chart success?"
+  ),
+  `Key Finding` = c(
+    "Pop dominates and grows (61.4% → 78.4%). Rock peaked in the 1980s and declined. Blues and Jazz have nearly disappeared.",
+    "Valence declined 28% while Energy rose — music became angrier and more powerful, not simply sadder. Three distinct cultural phases identified.",
+    "Speechiness grew 171.5% (1960s–2010s). Hip-Hop's speechiness is 4.8× higher than all other genres, confirming its mainstreaming.",
+    "Instrumentalness and Danceability are the strongest predictors. Random Forest (AUC = 0.87) outperformed Logistic Regression (AUC = 0.80)."
+  )
+) %>%
+  gt() %>%
+  tab_header(
+    title    = "Summary of Research Findings",
+    subtitle = "Billboard Hot 100 Analysis (1960–2019)"
+  ) %>%
+  cols_label(
+    RQ           = "RQ",
+    Question     = "Research Question",
+    `Key Finding` = "Key Finding"
+  ) %>%
+  cols_width(
+    RQ            ~ px(50),
+    Question      ~ px(250),
+    `Key Finding` ~ px(380)
+  ) %>%
+  tab_source_note("Source: Billboard Hot 100 × Spotify Hit Predictor × Music Dataset 1950–2019")
+```
+
+## Broader Implications
+
+Taken together, these findings tell a coherent story about the evolution of American popular music:
+
+Popular music has undergone a profound emotional transformation over six decades. The collective optimism of the Disco era gave way to the anger and intensity of Rock, which in turn was displaced by the rhythmic, speech-heavy aesthetics of Hip-Hop. This shift is not merely a change in taste — it reflects deeper cultural transitions, from communal celebration toward individual expression, from acoustic simplicity toward electronic complexity, and from melodic positivity toward raw emotional authenticity.
+
+The convergence of findings across all four research questions suggests that these changes are systematic and interconnected. The rise of speechiness (RQ3) explains part of the valence decline (RQ2). The dominance of instrumentalness and danceability as hit predictors (RQ4) reflects the structural characteristics of the genres that came to dominate the charts (RQ1). Music, it seems, does not change randomly — it evolves in response to the cultural, technological, and social forces of its time.
+
+## Future Research Directions
+
+- **Decade-specific modeling** — Building separate classification models for each decade to capture how the definition of a "hit" has evolved over time
+- **Lyrical sentiment analysis** — Integrating D3's lyrical emotion scores with Spotify's audio features to examine the relationship between sonic and lyrical emotional content
+- **International markets** — Extending the analysis beyond the U.S. market to examine whether these trends are universal or culturally specific
+- **Post-2019 analysis** — Incorporating data from 2020 onwards to examine the impact of the COVID-19 pandemic and the continued rise of streaming on musical trends

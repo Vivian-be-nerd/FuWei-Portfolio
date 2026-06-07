@@ -1,0 +1,1044 @@
+---
+title: "02 Pattern Analysis"
+author: "Fu Wei Hsu"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-location: right
+    toc-title: "On this page"
+    code-tools: true
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+editor: visual
+---
+
+# Executive Summary
+
+**Objective:**
+
+To conduct a systematic exploration of formatting patterns and special characters across the three datasets, ensuring a unified cleaning protocol prior to data integration.
+
+# importing 01 cleaned data
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(gt) 
+
+# Load cleaned datasets from 01_data_exploration
+D1_clean_base <- readRDS("../Data/cleaned_D1.rds")
+D2_clean_base <- readRDS("../Data/cleaned_D2.rds")
+D3_clean_base <- readRDS("../Data/cleaned_D3.rds")
+
+cat("Datasets loaded successfully\n")
+cat("D1 (Billboard):", nrow(D1_clean_base), "records\n")
+cat("D2 (Spotify):", nrow(D2_clean_base), "records\n")
+cat("D3 (Music Dataset):", nrow(D3_clean_base), "records\n")
+```
+
+------------------------------------------------------------------------
+
+# Part 1: Dataset 1 (Billboard) Pattern Analysis
+
+## 1.1 Artist Column Pattern Analysis
+
+```{r}
+# Define patterns to analyze
+d1_artist_stats <- tibble(
+  Pattern = c(
+    "Contains 'Featuring'",
+    "Contains 'feat.' or 'ft.'",
+    "Contains '&'",
+    "Contains ','",
+    "Contains '()' or '[]'",
+    "Contains '/'",
+    "Contains '\\'",
+    "Contains 'x' or 'X' (Collab)",
+    "Contains '+' (Collab)"
+  ),
+  Count = c(
+    sum(str_detect(D1_clean_base$artist, regex("Featuring", ignore_case = TRUE))),
+    sum(str_detect(D1_clean_base$artist, regex("feat\\.|ft\\.", ignore_case = TRUE))),
+    sum(str_detect(D1_clean_base$artist, "&")),
+    sum(str_detect(D1_clean_base$artist, ",")),
+    sum(str_detect(D1_clean_base$artist, "[\\(\\)\\[\\]]")),
+    sum(str_detect(D1_clean_base$artist, "/")),
+    sum(str_detect(D1_clean_base$artist, "\\\\")),
+    sum(str_detect(D1_clean_base$artist, regex("\\sx\\s", ignore_case = TRUE))),
+    sum(str_detect(D1_clean_base$artist, regex("\\s\\+\\s", ignore_case = TRUE)))
+  )
+)
+
+# Display table
+d1_artist_stats %>%
+  gt() %>%
+  tab_header(
+    title = "Artist Column Pattern Statistics (D1)"
+  ) %>%
+  cols_label(
+    Pattern = "Pattern Description"
+  ) %>%
+  fmt_number(
+    columns = Count,
+    decimals = 0,
+    use_seps = TRUE 
+  )
+
+```
+
+### Representative Examples
+
+```{r}
+# define a function to avoid repeating the filtering logic
+show_examples <- function(data, pattern_name, regex_pattern) {
+  cat(paste0("\nExample: contain ", pattern_name, "\n"))
+  
+  data %>%
+    filter(str_detect(artist, regex(regex_pattern, ignore_case = TRUE))) %>%
+    distinct(artist) %>%
+    slice_head(n = 2) %>%
+    pull(artist) %>%
+    print()
+}
+
+show_examples(D1_clean_base, "Featuring", "featuring")
+show_examples(D1_clean_base, "feat./ft.", "feat\\.|ft\\.")
+show_examples(D1_clean_base, "Ampersand (&)", "&")
+show_examples(D1_clean_base, "Comma (,)", ",")
+show_examples(D1_clean_base, "Brackets () []", "[\\(\\)\\[\\]]")
+show_examples(D1_clean_base, "Forward Slash (/)", "/")
+show_examples(D1_clean_base, "Backslash (\\)", "\\\\")
+show_examples(D1_clean_base, "x or X (Collab)", "\\sx\\s")
+show_examples(D1_clean_base, "Plus (+)", "\\s\\+\\s")
+
+```
+
+### Deep Analysis
+
+##### Analysis 1: Usage Context of '&' Symbol
+
+```{r}
+ampersand_data <- D1_clean_base %>% 
+  filter(str_detect(artist, "&")) %>% 
+  distinct(artist) %>% 
+  mutate(
+    # Check for collaboration markers
+    has_collab_marker = str_detect(artist, 
+      regex("featuring|feat\\.|ft\\.|with", ignore_case = TRUE)),
+    
+    # Count occurrences of '&'
+    ampersand_count = str_count(artist, "&"),
+    
+    # Categorize
+    type = case_when(
+      has_collab_marker ~ "Has collab marker (Safe to clean)",
+      ampersand_count >= 2 ~ "Multiple '&' (Complex collab)",
+      TRUE ~ "Simple '&' (Likely duo or group)"
+    )
+  )
+
+cat("Total artists containing '&':", nrow(ampersand_data), "\n\n")
+
+# Summary
+type_summary <- ampersand_data %>% 
+  count(type) %>% 
+  mutate(Percentage = round(n / nrow(ampersand_data) * 100, 1))
+
+type_summary %>% 
+  gt() %>% 
+  tab_header(title = "Analysis of '&' Symbol Usage Types") %>%
+  fmt_number(columns = n, decimals = 0, use_seps = TRUE) 
+
+```
+
+##### Analysis 1: Representative Examples
+
+```{r}
+# Define a helper function to display samples
+display_samples <- function(data, type_name, title, strategy) {
+  cat("\nCategory:", title, "\n")
+  cat("Cleaning Strategy:", strategy, "\n\n")
+  
+  data %>% 
+    filter(type == type_name) %>% 
+    slice_head(n = 2) %>% 
+    pull(artist) %>% 
+    print()
+}
+
+# Display samples based on categories
+display_samples(ampersand_data, 
+                "Has collab marker (Safe to clean)", 
+                "Collab marker detected (featuring/with/feat)", 
+                "Remove all content following the collab marker.")
+
+display_samples(ampersand_data, 
+                "Simple '&' (Likely duo or group)", 
+                "Simple '&' (No collab marker)", 
+                "Conservative approach; retain the primary artist before '&'.")
+
+display_samples(ampersand_data, 
+                "Multiple '&' (Complex collab)", 
+                "Multiple '&' (Complex cases)", 
+                "Similar to Category 1; remove content after the collab marker.")
+```
+
+##### Analysis 1: Cleaning Strategy
+
+```{r}
+cat("\n========================================\n")
+cat("  Cleaning Strategy for '&' Symbol\n")
+cat("========================================\n\n")
+
+cat("   Conservative Cleaning\n")
+cat("   - Remove all content after 'featuring', 'feat.', 'ft.', or 'with'.\n")
+cat("   - Preserve '&' (do not remove).\n\n")
+
+cat("   Examples:\n")
+cat("   'Drake Featuring Future & Young Thug' -> 'drake'\n")
+cat("   'The Kid LAROI & Justin Bieber'       -> 'the kid laroi & justin bieber' (Retained)\n")
+```
+
+##### Analysis 2: Parentheses Content Analysis
+
+```{r}
+# Prepare the data
+paren_data <- D1_clean_base %>%
+  filter(str_detect(artist, "\\(.*\\)")) %>%
+  mutate(
+    inside_paren = str_extract(artist, "\\(([^)]+)\\)"),
+    inside_paren_clean = str_remove_all(inside_paren, "[\\(\\)]"),
+    # Create categories to enable the display_samples function
+    type = if_else(str_detect(inside_paren_clean, regex("feat|duet|featuring", ignore_case = TRUE)),
+                   "Collab-related (Safe to remove)",
+                   "Group Info/Metadata (Preserve)")
+  )
+
+cat("Total artists containing parentheses:", nrow(paren_data), "\n\n")
+
+# Summary table of content inside parentheses
+paren_data %>%
+  count(inside_paren_clean, sort = TRUE) %>%
+  slice_head(n = 10) %>%
+  gt() %>%
+  tab_header(title = "Distribution of Content inside Parentheses") %>%
+  fmt_number(columns = n, decimals = 0, use_seps = TRUE)
+```
+
+##### Analysis 2: Representative Examples
+
+```{r}
+display_samples(paren_data, 
+                "Collab-related (Safe to remove)", 
+                "Collab-related (featuring/duet)", 
+                "Remove parentheses and content.")
+
+display_samples(paren_data, 
+                "Group Info/Metadata (Preserve)", 
+                "Group Names/Metadata", 
+                "Retain full string (preserve for context).")
+
+```
+
+##### Analysis 2: Cleaning Strategy
+
+```{r}
+cat("\n========================================\n")
+cat("Cleaning Strategy for Parentheses\n")
+cat("========================================\n\n")
+
+cat("   Sective Removal\n")
+cat("   - Remove parentheses containing 'featuring', 'feat.', or 'duet with'.\n")
+cat("   - Preserve other parentheses (e.g., band members, full group names).\n\n")
+
+cat("   Examples:\n")
+cat("   'Artist (Featuring Guest)'              -> 'artist' (Removed)\n")
+cat("   'Artist (Duet With Guest)'              -> 'artist' (Removed)\n")
+cat("   'Silk Sonic (Bruno Mars & Anderson .Paak)' -> 'Silk Sonic (Bruno Mars & Anderson .Paak)' (Preserved)\n")
+cat("   'F.L.Y. (Fast Life Yungstaz)'           -> 'F.L.Y. (Fast Life Yungstaz)' (Preserved)\n")
+
+```
+
+#### Analysis 3: Comma Usage Patterns
+
+```{r}
+
+comma_data <- D1_clean_base %>% 
+  filter(str_detect(artist, ",")) %>% 
+  distinct(artist) %>% 
+  mutate(
+    # Check for collaboration markers
+    has_collab_marker = str_detect(artist, 
+      regex("featuring|feat\\.|ft\\.|with", ignore_case = TRUE)),
+    
+    # Count commas
+    comma_count = str_count(artist, ","),
+    
+    # Categorize
+    type = case_when(
+      has_collab_marker ~ "Collab marker (Automated processing)",
+      comma_count >= 2 ~ "Multiple commas (Complex cases)",
+      TRUE ~ "Simple comma (Group/Part of name)"
+    )
+  )
+
+cat("Total artists containing commas:", nrow(comma_data), "\n\n")
+
+# Summary table
+comma_data %>% 
+  count(type) %>% 
+  mutate(Percentage = round(n / sum(n) * 100, 2)) %>% 
+  gt() %>% 
+  tab_header(title = "Usage Context Statistics for Commas") %>%
+  fmt_number(columns = n, decimals = 0, use_seps = TRUE)
+```
+
+##### Analysis 3: Representative Examples
+
+```{r}
+# Using the helper function defined in previous steps
+display_samples(comma_data, 
+                "Collab marker (Automated processing)", 
+                "Collab Marker Detected", 
+                "Remove collab marker and following content; comma will be handled automatically.")
+
+display_samples(comma_data, 
+                "Simple comma (Group/Part of name)", 
+                "Simple Comma (No collab marker)", 
+                "Preserve fully; likely multiple artists or part of the name.")
+
+display_samples(comma_data, 
+                "Multiple commas (Complex cases)", 
+                "Multiple Commas (Complex)", 
+                "Similar to collab cases; remove following content if collab marker exists.")
+
+```
+
+#### Analysis 3: Cleaning Strategy
+
+```{r}
+# Check for ", The" pattern (common in names like "Tyler, The Creator")
+name_comma <- D1_clean_base %>% 
+  filter(str_detect(artist, ", The")) %>% 
+  distinct(artist) %>% 
+  slice_head(n = 10)
+
+cat("Artists containing ', The' (likely part of the name):\n")
+name_comma %>% 
+  pull(artist) %>% 
+  print()
+
+cat("These commas are part of the artist's name is not be removed\n")
+```
+
+------------------------------------------------------------------------
+
+## 1.2 Song Column Pattern Analysis
+
+```{r}
+d1_song_stats <- tibble(
+  Pattern = c(
+    "Contains Parentheses ()",
+    "Contains Brackets []",
+    "Contains ' - ' (dash)",
+    "Contains 'feat.'",
+    "Contains 'Remaster'",
+    "Contains 'Live'",
+    "Contains 'Remix'",
+    "Contains 'Radio Edit'",
+    "Contains 'feat' inside ()",
+    "Contains '+' (Part of song title)",
+    "Contains 'Pt.' or 'Part'",
+    "Contains 'Take'"
+  ),
+  Count = c(
+    sum(str_detect(D1_clean_base$song, "\\(.*\\)")),
+    sum(str_detect(D1_clean_base$song, "\\[.*\\]")),
+    sum(str_detect(D1_clean_base$song, " - ")),
+    sum(str_detect(D1_clean_base$song, regex("feat\\.", ignore_case = TRUE))),
+    sum(str_detect(D1_clean_base$song, regex("Remaster", ignore_case = TRUE))),
+    sum(str_detect(D1_clean_base$song, regex("Live", ignore_case = TRUE))),
+    sum(str_detect(D1_clean_base$song, regex("Remix", ignore_case = TRUE))),
+    sum(str_detect(D1_clean_base$song, regex("Radio Edit", ignore_case = TRUE))),
+    sum(str_detect(D1_clean_base$song, regex("\\(.*feat", ignore_case = TRUE))),
+    sum(str_detect(D1_clean_base$song, regex("\\s\\+\\s", ignore_case = TRUE))),
+    sum(str_detect(D1_clean_base$song, regex("Pt\\.|Part", ignore_case = TRUE))),
+    sum(str_detect(D1_clean_base$song, regex("Take", ignore_case = TRUE)))
+  )
+) %>% 
+  mutate(Percentage = round(Count / nrow(D1_clean_base) * 100, 1))
+
+# Display table
+d1_song_stats %>% 
+  gt() %>% 
+  tab_header(title = "D1 Song Column Pattern Statistics") %>% 
+  fmt_number(columns = Count, decimals = 0, use_seps = TRUE)
+```
+
+### Pattern Examples
+
+```{r}
+show_song_examples <- function(data, pattern_regex, label) {
+  cat("\n=== Example:", label, "===\n")
+  data %>% 
+    filter(str_detect(song, regex(pattern_regex, ignore_case = TRUE))) %>% 
+    distinct(song) %>% 
+    slice_head(n = 3) %>% 
+    pull(song) %>% 
+    print()
+}
+
+# Run the function for each pattern
+show_song_examples(D1_clean_base, "\\(.*\\)", "Contains Parentheses ()")
+show_song_examples(D1_clean_base, "\\[.*\\]", "Contains Brackets []")
+show_song_examples(D1_clean_base, " - ", "Contains ' - ' (dash)")
+show_song_examples(D1_clean_base, "feat\\.", "Contains 'feat.'")
+show_song_examples(D1_clean_base, "Remaster", "Contains 'Remaster'")
+show_song_examples(D1_clean_base, "Live", "Contains 'Live'")
+show_song_examples(D1_clean_base, "Remix", "Contains 'Remix'")
+show_song_examples(D1_clean_base, "Radio Edit", "Contains 'Radio Edit'")
+show_song_examples(D1_clean_base, "\\(.*feat", "Contains 'feat' inside ()")
+show_song_examples(D1_clean_base, "\\s\\+\\s", "Contains '+' (Part of title)")
+show_song_examples(D1_clean_base, "Pt\\.|Part", "Contains 'Pt.' or 'Part'")
+show_song_examples(D1_clean_base, "Take", "Contains 'Take'")
+
+```
+
+### Deep Analysis
+
+#### Analysis 1: Parentheses Content Analysis
+
+```{r}
+# Extract and categorize content inside parentheses
+paren_data <- D1_clean_base %>%
+  filter(str_detect(song, "\\(.*\\)")) %>%
+  distinct(song) %>%
+  mutate(
+    inside_paren = str_extract(song, "\\(([^)]+)\\)"),
+    inside_clean = str_remove_all(inside_paren, "[\\(\\)]"),
+    
+    # Categorization
+    type = case_when(
+      str_detect(inside_clean, regex("remix", ignore_case = TRUE)) ~ "Remix Version",
+      str_detect(inside_clean, regex("^live$|live version|acoustic|unplugged", ignore_case = TRUE)) ~ "Performance Version",
+      str_detect(inside_clean, regex("radio edit|album version|single version", ignore_case = TRUE)) ~ "Release Version Tag",
+      str_detect(inside_clean, regex("remaster", ignore_case = TRUE)) ~ "Remastered Version",
+      str_detect(inside_clean, regex("feat\\.|featuring", ignore_case = TRUE)) ~ "Featuring Info",
+      TRUE ~ "Subtitle or Title Part (Keep)"
+    )
+  )
+
+cat("Total songs containing parentheses:", nrow(paren_data), "\n\n")
+
+# Statistics table
+paren_data %>%
+  count(type) %>%
+  arrange(desc(n)) %>%
+  mutate(Percentage = round(n / sum(n) * 100, 1)) %>%
+  gt() %>%
+  tab_header(title = "Parentheses Content Classification") %>%
+  fmt_number(columns = n, decimals = 0, use_seps = TRUE)
+```
+
+#### Analysis 1: Representative Examples
+
+```{r}
+# Define a cleaner display function
+display_samples <- function(data, category_name) {
+  cat("\n=== Category:", category_name, "===\n")
+  data %>%
+    filter(type == category_name) %>%
+    slice_head(n = 8) %>%
+    pull(song) %>%
+    {cat(paste0("  ", seq_along(.), ". '", ., "'\n"), sep = "")}
+}
+
+# Run display for each category
+display_samples(paren_data, "Remix Version")
+display_samples(paren_data, "Performance Version")
+display_samples(paren_data, "Release Version Tag")
+display_samples(paren_data, "Remastered Version")
+display_samples(paren_data, "Featuring Info")
+display_samples(paren_data, "Subtitle or Title Part (Keep)")
+```
+
+**Top 20 Parentheses Content**
+
+```{r}
+paren_data %>%
+  count(inside_clean, sort = TRUE) %>%
+  slice_head(n = 20) %>%
+  gt() %>%
+  tab_header(title = "Top 20 Most Frequent Parentheses Content") %>%
+  fmt_number(columns = n, decimals = 0, use_seps = TRUE)
+```
+
+------------------------------------------------------------------------
+
+#### Analysis 2: Dash Content Analysis
+
+```{r}
+# Extract and categorize content after the dash
+dash_data <- D1_clean_base %>%
+  filter(str_detect(song, " - ")) %>%
+  distinct(song) %>%
+  mutate(
+    # Extract content after the dash
+    after_dash = str_extract(song, " - (.*)$"),
+    after_dash_clean = str_remove(after_dash, "^ - "),
+    
+    # Categorization
+    type = case_when(
+      str_detect(after_dash_clean, regex("remix", ignore_case = TRUE)) ~ "Remix Version",
+      str_detect(after_dash_clean, regex("remaster", ignore_case = TRUE)) ~ "Remastered Version",
+      str_detect(after_dash_clean, regex("live|acoustic", ignore_case = TRUE)) ~ "Performance Version",
+      str_detect(after_dash_clean, regex("radio edit|album version|single", ignore_case = TRUE)) ~ "Release Version Tag",
+      TRUE ~ "Subtitle or Title Part (Keep)"
+    )
+  )
+
+cat("Total songs containing dashes:", nrow(dash_data), "\n\n")
+
+# Statistics table
+dash_data %>%
+  count(type) %>%
+  arrange(desc(n)) %>%
+  mutate(Percentage = round(n / sum(n) * 100, 1)) %>%
+  gt() %>%
+  tab_header(title = "Dash Content Classification") %>%
+  fmt_number(columns = n, decimals = 0, use_seps = TRUE)
+```
+
+#### Analysis 2: Representative Examples
+
+```{r}
+# display_samples(dash_data, "Category Name")
+
+display_samples(dash_data, "Remix Version")
+display_samples(dash_data, "Remastered Version")
+display_samples(dash_data, "Performance Version")
+display_samples(dash_data, "Release Version Tag")
+display_samples(dash_data, "Subtitle or Title Part (Keep)")
+```
+
+**Top 20 Dash Content**
+
+```{r}
+dash_data %>%
+  count(after_dash_clean, sort = TRUE) %>%
+  slice_head(n = 20) %>%
+  gt() %>%
+  tab_header(title = "Top 20 Most Frequent Dash Content") %>%
+  fmt_number(columns = n, decimals = 0, use_seps = TRUE)
+```
+
+------------------------------------------------------------------------
+
+#### Analysis 3: Bracket Content Analysis
+
+```{r}
+# Extract content inside brackets
+bracket_data <- D1_clean_base %>%
+  filter(str_detect(song, "\\[.*\\]")) %>%
+  distinct(song) %>%
+  mutate(
+    inside_bracket = str_extract(song, "\\[([^]]+)\\]"),
+    inside_clean = str_remove_all(inside_bracket, "[\\[\\]]")
+  )
+
+cat("Total songs containing brackets:", nrow(bracket_data), "\n\n")
+
+# Statistics table
+bracket_data %>%
+  count(inside_clean, sort = TRUE) %>%
+  slice_head(n = 10) %>%
+  gt() %>%
+  tab_header(title = "Frequency of Content Inside Brackets") %>%
+  fmt_number(columns = n, decimals = 0, use_seps = TRUE)
+```
+
+#### Analysis 3: Representative Examples
+
+```{r}
+bracket_data %>%
+  slice_head(n = 10) %>%
+  pull(song) %>%
+  {cat(paste0("  ", seq_along(.), ". '", ., "'\n"), sep = "")}
+```
+
+------------------------------------------------------------------------
+
+#### False Positive Checks
+
+```{r}
+# Check 'Live'
+## 'Live' as a lyric word
+live_in_lyrics <- D1_clean_base %>%
+  filter(str_detect(song, regex("\\blive\\b", ignore_case = TRUE))) %>%
+  filter(!str_detect(song, regex("\\(.*live.*\\)| - .*live", ignore_case = TRUE))) %>%
+  distinct(song) %>%
+  slice_head(n = 10)
+
+## 'Live' as part of the song title (Not a Live version)
+live_in_lyrics %>%
+  pull(song) %>%
+  {cat(paste0("  ", seq_along(.), ". '", ., "'\n"), sep = "")}
+
+cat("Using regex('live') would result in false positives!\n")
+
+# Check 'Part'
+cat("\n─── Check 2: 'Part' as a lyric word ───\n\n")
+party_words <- D1_clean_base %>%
+  filter(str_detect(song, regex("party|part", ignore_case = TRUE))) %>%
+  filter(!str_detect(song, regex("part\\s+\\d|pt\\.\\s*\\d", ignore_case = TRUE))) %>%
+  distinct(song) %>%
+  slice_head(n = 10)
+
+## 'Party/Part' as part of the song title
+party_words %>%
+  pull(song) %>%
+  {cat(paste0("  ", seq_along(.), ". '", ., "'\n"), sep = "")}
+
+# Check 'Take'
+## 'Take' as a lyric word
+take_words <- D1_clean_base %>%
+  filter(str_detect(song, regex("\\btake\\b", ignore_case = TRUE))) %>%
+  filter(!str_detect(song, regex("take\\s+\\d", ignore_case = TRUE))) %>%
+  distinct(song) %>%
+  slice_head(n = 10)
+
+## 'Take' as part of the song title
+take_words %>%
+  pull(song) %>%
+  {cat(paste0("  ", seq_along(.), ". '", ., "'\n"), sep = "")}
+```
+
+#### Cleaning Strategy
+
+```{r}
+cat("\n========================================\n")
+cat("D1 Song Column Cleaning Strategy\n")
+cat("========================================\n\n")
+
+cat("Extreme Conservative Cleaning - Remove only explicit version tags.\n\n")
+
+cat("Data-Driven Rationale:\n")
+cat("  - Parentheses (): 99.40% are part of the song title -> Preserve most.\n")
+cat("  - Dash -:        98.96% are part of the song title -> Preserve most.\n")
+cat("  - Brackets []:  100% are descriptive metadata    -> Remove all.\n\n")
+
+cat("Cleaning Objectives:\n")
+cat("  1. Remove explicit version tags (Remix, Remaster, Live Version, etc.).\n")
+cat("  2. Remove descriptive brackets [].\n")
+cat("  3. Preserve song subtitles and full titles.\n")
+cat("  4. Avoid removing common words in lyrics (Live, Part, Take).\n\n")
+
+cat("Exclusions (I Do NOT clean):\n")
+cat("  - Standard parentheses (likely part of the title).\n")
+cat("  - Standard dashes (likely subtitles).\n")
+cat("  - Words like 'live', 'part', 'take' (usually part of the song lyrics).\n")
+```
+
+# Part 2: Dataset 2 (Spotify) Pattern Analysis
+
+## 2.1 Artist Column Pattern Analysis
+
+```{r}
+d2_artist_stats <- tibble(
+  Pattern = c(
+    "Contains 'Featuring'",
+    "Contains 'feat.' or 'ft.'",
+    "Contains '&'",
+    "Contains comma ','",
+    "Contains brackets () or []",
+    "Contains forward slash /",
+    "Contains backslash \\",
+    "Contains 'x' or 'X' (Collab marker)",
+    "Contains '+' (Collab marker)"
+  ),
+  Count = c(
+    sum(str_detect(D2_clean_base$artist, regex("Featuring", ignore_case = TRUE))),
+    sum(str_detect(D2_clean_base$artist, regex("feat\\.|ft\\.", ignore_case = TRUE))),
+    sum(str_detect(D2_clean_base$artist, "&")),
+    sum(str_detect(D2_clean_base$artist, ",")),
+    sum(str_detect(D2_clean_base$artist, "[\\(\\)\\[\\]]")),
+    sum(str_detect(D2_clean_base$artist, "/")),
+    sum(str_detect(D2_clean_base$artist, "\\\\")),
+    sum(str_detect(D2_clean_base$artist, regex("\\sx\\s", ignore_case = TRUE))),
+    sum(str_detect(D2_clean_base$artist, regex("\\s\\+\\s", ignore_case = TRUE)))
+  )
+) %>% 
+  mutate(
+    Percentage = round(Count / nrow(D2_clean_base) * 100, 1)
+  )
+
+d2_artist_stats %>% 
+  gt() %>% 
+  tab_header(title = "D2 Artist Field Pattern Statistics") %>% 
+  fmt_number(columns = Count, decimals = 0, use_seps = TRUE)
+```
+
+### Representative Examples
+
+```{r}
+display_samples <- function(data, pattern_regex, label) {
+  cat("\n=== Example:", label, "===\n")
+  data %>% 
+    filter(str_detect(artist, regex(pattern_regex, ignore_case = TRUE))) %>% 
+    distinct(artist) %>% 
+    slice_head(n = 2) %>% 
+    pull(artist) %>% 
+    print()
+}
+
+# Run the function for each pattern
+display_samples(D2_clean_base, "Featuring", "Contains 'Featuring'")
+display_samples(D2_clean_base, "feat\\.|ft\\.", "Contains 'feat.' or 'ft.'")
+display_samples(D2_clean_base, "&", "Contains '&'")
+display_samples(D2_clean_base, ",", "Contains comma ','")
+display_samples(D2_clean_base, "[\\(\\)\\[\\]]", "Contains brackets () or []")
+display_samples(D2_clean_base, "/", "Contains forward slash /")
+display_samples(D2_clean_base, "\\\\", "Contains backslash \\")
+display_samples(D2_clean_base, "\\sx\\s", "Contains 'x' or 'X'")
+display_samples(D2_clean_base, "\\s\\+\\s", "Contains '+'")
+```
+
+### Cleaning Strategy
+
+```{r}
+cat("\n========================================\n")
+cat("D2 Artist Field Cleaning Strategy\n")
+cat("========================================\n\n")
+
+cat("Core Principle: Conservative cleaning - Only remove explicit collaboration markers.\n\n")
+
+cat("Data-Driven Rationale:\n")
+cat("  - Featuring: 4.03%  -> Remove it and all following content.\n")
+cat("  - feat./ft.: 0.02%  -> Remove it and all following content.\n")
+cat("  - &:         4.34%  -> Preserve (part of the artist name).\n")
+cat("  - Comma:     0.62%  -> Preserve (let featuring logic naturally handle it).\n")
+cat("  - Brackets:  0.15%  -> Preserve (often artist aliases or metadata).\n")
+cat("  - / + x:     <0.2%  -> Preserve (part of the artist name).\n\n")
+
+cat("Cleaning Objectives:\n")
+cat("  1. Remove 'Featuring' and all following content.\n")
+cat("  2. Remove 'feat.' / 'ft.' and all following content.\n")
+cat("  3. Preserve '&', '/', '+', 'x' (these are intrinsic to the artist names).\n\n")
+
+cat("Exclusions (I Do Not Clean):\n")
+cat("  - '&' symbol (may indicate a collaborative group name).\n")
+cat("  - Brackets (may contain artist aliases, e.g., 'Ernie (Jim Henson)').\n")
+cat("  - Commas (may be part of a band name, e.g., 'Blood, Sweat & Tears').\n")
+
+```
+
+------------------------------------------------------------------------
+
+## 2.2 Track Column Pattern Analysis
+
+```{r}
+cat("\n========================================\n")
+cat("D2 (Spotify) - Track Field Analysis\n")
+cat("========================================\n\n")
+
+d2_track_stats <- tibble(
+  Pattern = c(
+    "Contains Parentheses ()",
+    "Contains Brackets []",
+    "Contains ' - ' (dash)",
+    "Contains 'feat.'",
+    "Contains 'Remaster'",
+    "Contains 'Live'",
+    "Contains 'Remix'",
+    "Contains 'Radio Edit'",
+    "Contains 'feat' inside ()",
+    "Contains 'Pt.' or 'Part'",
+    "Contains 'Take'"
+  ),
+  Count = c(
+    sum(str_detect(D2_clean_base$track, "\\(.*\\)")),
+    sum(str_detect(D2_clean_base$track, "\\[.*\\]")),
+    sum(str_detect(D2_clean_base$track, " - ")),
+    sum(str_detect(D2_clean_base$track, regex("feat\\.", ignore_case = TRUE))),
+    sum(str_detect(D2_clean_base$track, regex("Remaster", ignore_case = TRUE))),
+    sum(str_detect(D2_clean_base$track, regex("Live", ignore_case = TRUE))),
+    sum(str_detect(D2_clean_base$track, regex("Remix", ignore_case = TRUE))),
+    sum(str_detect(D2_clean_base$track, regex("Radio Edit", ignore_case = TRUE))),
+    sum(str_detect(D2_clean_base$track, regex("\\(.*feat", ignore_case = TRUE))),
+    sum(str_detect(D2_clean_base$track, regex("Pt\\.|Part", ignore_case = TRUE))),
+    sum(str_detect(D2_clean_base$track, regex("Take", ignore_case = TRUE)))
+  )
+) %>% 
+  mutate(Percentage = round(Count / nrow(D2_clean_base) * 100, 1))
+
+d2_track_stats %>% 
+  gt() %>% 
+  tab_header(title = "D2 Track Field Pattern Statistics") %>% 
+  fmt_number(columns = Count, decimals = 0, use_seps = TRUE)
+```
+
+### Representative Examples
+
+```{r}
+# Reusing the helper function for clean output
+show_track_examples <- function(data, pattern_regex, label) {
+  cat("\n=== Example:", label, "===\n")
+  data %>% 
+    filter(str_detect(track, regex(pattern_regex, ignore_case = TRUE))) %>% 
+    distinct(track) %>% 
+    slice_head(n = 5) %>% 
+    pull(track) %>% 
+    print()
+}
+
+show_track_examples(D2_clean_base, "\\(.*\\)", "Contains Parentheses ()")
+show_track_examples(D2_clean_base, "\\[.*\\]", "Contains Brackets []")
+show_track_examples(D2_clean_base, " - ", "Contains ' - ' (dash)")
+show_track_examples(D2_clean_base, "feat\\.", "Contains 'feat.'")
+show_track_examples(D2_clean_base, "Remaster", "Contains 'Remaster'")
+show_track_examples(D2_clean_base, "Live", "Contains 'Live'")
+show_track_examples(D2_clean_base, "Remix", "Contains 'Remix'")
+show_track_examples(D2_clean_base, "Radio Edit", "Contains 'Radio Edit'")
+show_track_examples(D2_clean_base, "\\(.*feat", "Contains 'feat' inside ()")
+show_track_examples(D2_clean_base, "Pt\\.|Part", "Contains 'Pt.' or 'Part'")
+show_track_examples(D2_clean_base, "Take", "Contains 'Take'")
+```
+
+### Cleaning Strategy
+
+```{r}
+cat("\n========================================\n")
+cat("D2 Track Field Cleaning Strategy\n")
+cat("========================================\n\n")
+
+cat("Core Principle: Active Dash Cleaning - D2 dash usage differs significantly from D1.\n\n")
+
+cat("Data-Driven Rationale:\n")
+cat("  - Parentheses ():   6.89%  -> Selective removal (target version tags only).\n")
+cat("  - Brackets []:      0.22%  -> Remove all.\n")
+cat("  - Dash -:           6.95%  -> Active cleaning (often indicates version tags).\n")
+cat("  - Remaster:         2.10%  -> Remove (often found after dash).\n")
+cat("  - Live:             1.47%  -> Remove (often found after dash).\n")
+cat("  - Remix:            0.39%  -> Remove.\n")
+cat("  - Radio Edit:       0.10%  -> Remove.\n")
+cat("  - feat.:            0.36%  -> Remove (in parentheses or after dash).\n\n")
+
+cat("Cleaning Objectives:\n")
+cat("  1. Remove all brackets and their content.\n")
+cat("  2. Remove version tags inside parentheses (remix, remaster, live, feat., etc.).\n")
+cat("  3. Remove version tags following a dash (Remaster, Live, Remix, Radio Edit, etc.).\n\n")
+
+cat("Exclusions (I Do Not Clean):\n")
+cat("  - Standard parentheses (likely part of the title, e.g., 'Samba De Uma Nota So (One Note Samba)').\n")
+cat("  - 'Part' or 'Pt.' following a dash (likely song identification, e.g., 'Hip City - Pt. 2').\n\n")
+
+cat("Note on D2 vs. D1 Dash Differences:\n")
+cat("  - D1 Dash: 98.5% are subtitles -> Conservative approach (remove Remix only).\n")
+cat("  - D2 Dash: Frequent version tagging -> Active approach (remove Remaster, Live, Remix, etc.).\n")
+```
+
+------------------------------------------------------------------------
+
+# Part 3: Dataset 3 (Music Dataset) Pattern Analysis
+
+## 3.1 Artist Column Pattern Analysis
+
+```{r}
+cat("\n========================================\n")
+cat("D3 (Music Dataset) - Column Field Analysis\n")
+cat("========================================\n\n")
+
+d3_artist_stats <- tibble(
+  Pattern = c(
+    "Contains 'Featuring'",
+    "Contains 'feat.' or 'ft.'",
+    "Contains '&'",
+    "Contains comma ','",
+    "Contains brackets () or []",
+    "Contains forward slash /",
+    "Contains backslash \\",
+    "Contains 'x' or 'X' (Collab marker)",
+    "Contains '+' (Collab marker)"
+  ),
+  Count = c(
+    sum(str_detect(D3_clean_base$artist_name, regex("Featuring", ignore_case = TRUE))),
+    sum(str_detect(D3_clean_base$artist_name, regex("feat\\.|ft\\.", ignore_case = TRUE))),
+    sum(str_detect(D3_clean_base$artist_name, "&")),
+    sum(str_detect(D3_clean_base$artist_name, ",")),
+    sum(str_detect(D3_clean_base$artist_name, "[\\(\\)\\[\\]]")),
+    sum(str_detect(D3_clean_base$artist_name, "/")),
+    sum(str_detect(D3_clean_base$artist_name, "\\\\")),
+    sum(str_detect(D3_clean_base$artist_name, regex("\\sx\\s", ignore_case = TRUE))),
+    sum(str_detect(D3_clean_base$artist_name, regex("\\s\\+\\s", ignore_case = TRUE)))
+  )
+) %>% 
+  mutate(
+    Percentage = round(Count / nrow(D3_clean_base) * 100, 2)
+  )
+
+d3_artist_stats %>% 
+  gt() %>% 
+  tab_header(
+    title = "D3 Artist Field Pattern Statistics"
+  ) %>% 
+  fmt_number(
+    columns = Count,
+    decimals = 0,
+    use_seps = TRUE
+  )
+```
+
+### Representative Examples
+
+```{r}
+# Reusing the display_samples helper function
+# Make sure to use 'artist_name' column for D3
+display_d3_samples <- function(data, pattern_regex, label) {
+  cat("\n=== Example:", label, "===\n")
+  data %>% 
+    filter(str_detect(artist_name, regex(pattern_regex, ignore_case = TRUE))) %>% 
+    distinct(artist_name) %>% 
+    slice_head(n = 2) %>% 
+    pull(artist_name) %>% 
+    print()
+}
+
+display_d3_samples(D3_clean_base, "Featuring", "Contains 'Featuring'")
+display_d3_samples(D3_clean_base, "feat\\.|ft\\.", "Contains 'feat.' or 'ft.'")
+display_d3_samples(D3_clean_base, "&", "Contains '&'")
+display_d3_samples(D3_clean_base, ",", "Contains comma ','")
+display_d3_samples(D3_clean_base, "[\\(\\)\\[\\]]", "Contains brackets () or []")
+display_d3_samples(D3_clean_base, "/", "Contains forward slash /")
+display_d3_samples(D3_clean_base, "\\\\", "Contains backslash \\")
+display_d3_samples(D3_clean_base, "\\sx\\s", "Contains 'x' or 'X'")
+display_d3_samples(D3_clean_base, "\\s\\+\\s", "Contains '+'")
+```
+
+### Cleaning Strategy
+
+```{r}
+cat("\n========================================\n")
+cat("D3 Artist Field Cleaning Strategy\n")
+cat("========================================\n\n")
+
+cat("Core Principle: Almost no cleaning required.\n\n")
+
+cat("Data-Driven Rationale:\n")
+cat("  - Featuring: 0.00%  -> Does not exist.\n")
+cat("  - feat./ft.: 0.01%  -> These are part of the artist names, not collaboration markers.\n")
+cat("  - &:         2.97%  -> Preserve (part of the artist name).\n")
+cat("  - Comma:     0.79%  -> Preserve (part of band names).\n")
+cat("  - Brackets:  0.01%  -> Preserve (part of band names).\n")
+cat("  - / + x:     <0.2%  -> Preserve (part of artist names).\n\n")
+
+cat("Cleaning Objectives:\n")
+cat("  1. Only execute str_trim() to remove leading/trailing whitespace.\n")
+cat("  2. Do not remove any content.\n\n")
+```
+
+------------------------------------------------------------------------
+
+3.2 Track Column Pattern Analysis
+
+```{r}
+cat("\n========================================\n")
+cat("D3 (Music Dataset) - Track Coulmn Analysis\n")
+cat("========================================\n\n")
+
+d3_track_stats <- tibble(
+  Pattern = c(
+    "Contains Parentheses ()",
+    "Contains Brackets []",
+    "Contains ' - ' (dash)",
+    "Contains 'feat.'",
+    "Contains 'Remaster'",
+    "Contains 'Live'",
+    "Contains 'Remix'",
+    "Contains 'Radio Edit'",
+    "Contains 'feat' inside ()",
+    "Contains '+' (Part of title)",
+    "Contains 'Pt.' or 'Part'",
+    "Contains 'Take'"
+  ),
+  Count = c(
+    sum(str_detect(D3_clean_base$track_name, "\\(.*\\)")),
+    sum(str_detect(D3_clean_base$track_name, "\\[.*\\]")),
+    sum(str_detect(D3_clean_base$track_name, " - ")),
+    sum(str_detect(D3_clean_base$track_name, regex("feat\\.", ignore_case = TRUE))),
+    sum(str_detect(D3_clean_base$track_name, regex("Remaster", ignore_case = TRUE))),
+    sum(str_detect(D3_clean_base$track_name, regex("Live", ignore_case = TRUE))),
+    sum(str_detect(D3_clean_base$track_name, regex("Remix", ignore_case = TRUE))),
+    sum(str_detect(D3_clean_base$track_name, regex("Radio Edit", ignore_case = TRUE))),
+    sum(str_detect(D3_clean_base$track_name, regex("\\(.*feat", ignore_case = TRUE))),
+    sum(str_detect(D3_clean_base$track_name, regex("\\s\\+\\s", ignore_case = TRUE))),
+    sum(str_detect(D3_clean_base$track_name, regex("Pt\\.|Part", ignore_case = TRUE))),
+    sum(str_detect(D3_clean_base$track_name, regex("Take", ignore_case = TRUE)))
+  )
+) %>% 
+  mutate(Percentage = round(Count / nrow(D3_clean_base) * 100, 2))
+
+d3_track_stats %>% 
+  gt() %>% 
+  tab_header(title = "D3 Track Field Pattern Statistics") %>% 
+  fmt_number(columns = Count, decimals = 0, use_seps = TRUE)
+```
+
+### Representative Examples
+
+```{r}
+show_d3_track_examples <- function(data, pattern_regex, label) {
+  cat("\n=== Example:", label, "===\n")
+  data %>% 
+    filter(str_detect(track_name, regex(pattern_regex, ignore_case = TRUE))) %>% 
+    distinct(track_name) %>% 
+    slice_head(n = 5) %>% 
+    pull(track_name) %>% 
+    print()
+}
+
+show_d3_track_examples(D3_clean_base, "\\(.*\\)", "Contains Parentheses ()")
+show_d3_track_examples(D3_clean_base, "\\[.*\\]", "Contains Brackets []")
+show_d3_track_examples(D3_clean_base, " - ", "Contains ' - ' (dash)")
+show_d3_track_examples(D3_clean_base, "feat\\.", "Contains 'feat.'")
+show_d3_track_examples(D3_clean_base, "Remaster", "Contains 'Remaster'")
+show_d3_track_examples(D3_clean_base, "Live", "Contains 'Live'")
+show_d3_track_examples(D3_clean_base, "Remix", "Contains 'Remix'")
+show_d3_track_examples(D3_clean_base, "Radio Edit", "Contains 'Radio Edit'")
+show_d3_track_examples(D3_clean_base, "\\(.*feat", "Contains 'feat' inside ()")
+show_d3_track_examples(D3_clean_base, "\\s\\+\\s", "Contains '+' (Part of title)")
+show_d3_track_examples(D3_clean_base, "Pt\\.|Part", "Contains 'Pt.' or 'Part'")
+show_d3_track_examples(D3_clean_base, "Take", "Contains 'Take'")
+```
+
+### Cleaning Strategy
+
+```{r}
+cat("\n========================================\n")
+cat("D3 Track Field Cleaning Strategy\n")
+cat("========================================\n\n")
+
+cat("Core Principle: Only clean version tags inside parentheses; no dash handling required.\n\n")
+
+cat("Data-Driven Rationale:\n")
+cat("  - Parentheses ():   5.22%  -> Selective removal (target version tags only).\n")
+cat("  - Brackets []:      0.08%  -> Remove all.\n")
+cat("  - Dash -:           0.00%  -> Non-existent; no action needed.\n")
+cat("  - feat.:            1.26%  -> Remove (almost entirely within parentheses).\n")
+cat("  - Remaster:         0.08%  -> Remove (all within parentheses).\n")
+cat("  - Live:             0.82%  -> Caution required (large number are lyric verbs).\n")
+cat("  - Remix:            0.10%  -> Remove.\n")
+cat("  - Radio Edit:       0.02%  -> Remove.\n\n")
+
+cat("Cleaning Objectives:\n")
+cat("  1. Remove all brackets and their content.\n")
+cat("  2. Remove version tags inside parentheses (remix, remaster, feat., etc.).\n")
+cat("  3. For 'Live', only remove explicit (live) formats inside parentheses.\n\n")
+
+cat("Exclusions (I Do Not Clean):\n")
+cat("  - Standard parentheses (likely part of the title).\n")
+cat("  - 'live' used in lyrics ('as long as i live', 'i'm alive').\n")
+cat("  - '+' symbol ('good + bad times' is the title itself).\n\n")
+```

@@ -1,0 +1,281 @@
+---
+title: "01 Initial Data Exploration"
+author: "Fu Wei Hsu"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-location: right
+    toc-title: "On this page"
+    code-tools: true
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+editor: visual
+---
+
+# Read.csv
+
+```{r}
+
+# Load library
+library(tidyverse)
+D1_BillboardHot100 <- read_csv("../Data/Data1_charts.csv", show_col_types = FALSE)
+D2_SpotifyHitPredictor_00s <- read_csv("../Data/Data2_dataset-of-00s.csv", show_col_types = FALSE)
+D2_SpotifyHitPredictor_10s <- read_csv("../Data/Data2_dataset-of-10s.csv", show_col_types = FALSE)
+D2_SpotifyHitPredictor_60s <- read_csv("../Data/Data2_dataset-of-60s.csv", show_col_types = FALSE)
+D2_SpotifyHitPredictor_70s <- read_csv("../Data/Data2_dataset-of-70s.csv", show_col_types = FALSE)
+D2_SpotifyHitPredictor_80s <- read_csv("../Data/Data2_dataset-of-80s.csv", show_col_types = FALSE)
+D2_SpotifyHitPredictor_90s <- read_csv("../Data/Data2_dataset-of-90s.csv", show_col_types = FALSE)
+D3_MusicDataset1950_2019 <- read_csv("../Data/Data3_tcc_ceds_music.csv", show_col_types = FALSE)
+
+# Output final confirmation message
+cat("All datasets loaded successfully.")
+```
+
+# Part A: Exploratory Data Analysis
+
+## D1_BillboardHot100
+
+### Introduction
+
+With 330,000 rows, this dataset covers approximately 3,300 weeks of music history. This equates to 63 years, aligning perfectly with the Billboard timeline from 1958 to 2021.
+
+**Data Quality Conclusion**
+
+**1. Data Scale:**
+
+-   Extensive coverage of 330k+ records spanning over six decades.
+
+**2. Data Completeness**
+
+-   Zero missing values in essential fields (Date, Song, Artist, Rank).
+
+-   Note on New Entries: The 32,312 NA values in last-week are confirmed as debut tracks (their first week on the chart).
+
+**3. Duplicate Check**
+
+-   0 identical rows (no exact duplicates at the record level).
+
+#### - Data Overview (Glimpse)
+
+```{r}
+# Use glimpse() to inspect variable types and data dimensions
+glimpse(D1_BillboardHot100)
+```
+
+#### - Data Preview
+
+```{r}
+# Preview the first few rows to understand the data content
+head(D1_BillboardHot100)
+```
+
+#### - Data Integrity Check (Duplicates)
+
+```{r}
+# Check for duplicate records in the dataset
+sum(duplicated(D1_BillboardHot100))
+```
+
+#### - Missing Value Analysis
+
+```{r}
+# Identify missing values; note that 'last-week = 0' represents new entries
+colSums(is.na(D1_BillboardHot100))
+```
+
+## D2_SpotifyHitPredictor
+
+### Introduction
+
+**Data Quality Conclusion**
+
+**1. Data Scale and Distribution**
+
+-   Total Sample Size: 41,106 tracks.
+-   Decade Distribution: Six decades (1960s–2010s).
+
+**2. Data Completeness (Missing Values)**
+
+-   Result: zero missing values.
+
+**3. Duplicate Identification**
+
+-   Row-level check: 0 identical rows (no exact duplicates).
+-   URI-level check: 546 duplicate URIs detected.
+
+Interpretation: This confirms that 546 tracks overlap between different decade files (e.g., a song appearing in both the 70s and 80s datasets).
+
+**4. Key Variable Observations**
+
+-   Target Variable: A track was a "Hit" (1) or a "Flop" (0).
+-   Date Precision: The dataset lacks specific dates and only provides decade labels. I will rely on D1 (Billboard) or D3 (Music Dataset) to align these tracks with precise years for time-series analysis.
+
+#### Labeling Decades While Merging Datasets
+
+```{r}
+D2_Spotify_All <- bind_rows(
+  read_csv("../Data/Data2_dataset-of-60s.csv", show_col_types = FALSE) %>% mutate(decade = "60s"),
+  read_csv("../Data/Data2_dataset-of-70s.csv", show_col_types = FALSE) %>% mutate(decade = "70s"),
+  read_csv("../Data/Data2_dataset-of-80s.csv", show_col_types = FALSE) %>% mutate(decade = "80s"),
+  read_csv("../Data/Data2_dataset-of-90s.csv", show_col_types = FALSE) %>% mutate(decade = "90s"),
+  read_csv("../Data/Data2_dataset-of-00s.csv", show_col_types = FALSE) %>% mutate(decade = "00s"),
+  read_csv("../Data/Data2_dataset-of-10s.csv", show_col_types = FALSE) %>% mutate(decade = "10s")
+)
+```
+
+```{r}
+# glimpse D2_Spotify_All
+glimpse(D2_Spotify_All)
+
+# Preview Rows
+head(D2_Spotify_All)
+
+# Remove Prefix wordings
+D2_Spotify_All <- D2_Spotify_All %>% 
+  mutate(uri = str_remove(uri, "spotify:track:"))
+length(unique(D2_Spotify_All$uri)) == nrow(D2_Spotify_All) - 546
+glimpse(D2_Spotify_All)
+head(D2_Spotify_All)
+
+# check Decade Distribution from 60s to 10s 
+table(D2_Spotify_All$decade)
+
+# Duplicate Check
+## Check for identical rows across the entire dataset
+sum(duplicated(D2_Spotify_All))
+
+## Detect duplicate entries based on unique Spotify URIs
+sum(duplicated(D2_Spotify_All$uri))
+
+# Missing Values
+colSums(is.na(D2_Spotify_All))
+```
+
+## D3_MusicDataset1950_2019
+
+### Introduction
+
+Data3 maps the evolution of lyrical themes and audio characteristics across genres and decades.
+
+**Data Quality Conclusion**
+
+**1. Data Scale and Distribution**
+
+-   Contains 28,372 records and 31 variables, spanning from 1950 to 2019, providing a robust sample size for analysis.
+
+**2. Data Completeness**
+
+-   Critical audio features and lyrical topics are complete with no significant missing values.
+
+**3. Duplicate Check**
+
+-   No duplicate records were identified.
+
+**4. Key Variable Observations**
+
+-   The dataset effectively integrates quantitative audio features (e.g., danceability, acousticness) with categorical lyrical topics (e.g., romantic, sadness), forming a strong foundation for comparative analysis.
+
+```{r}
+# glimpse D3_MusicDataset1950_2019
+glimpse(D3_MusicDataset1950_2019)
+
+# Preview Rows
+head(D3_MusicDataset1950_2019)
+
+# Duplicate Check
+sum(duplicated(D3_MusicDataset1950_2019))
+
+# Missing Values
+colSums(is.na(D3_MusicDataset1950_2019))
+
+# Remove first no meaningful column
+D3_MusicDataset1950_2019 <- D3_MusicDataset1950_2019 %>% 
+  select(-...1)
+glimpse(D3_MusicDataset1950_2019)
+
+# check music genre 
+table(D3_MusicDataset1950_2019$genre)
+```
+
+### Saving to RDS
+
+```{r}
+
+# Saving cleaned data to RDS
+saveRDS(D1_BillboardHot100, "../Data/cleaned_D1.rds")
+saveRDS(D2_Spotify_All, "../Data/cleaned_D2.rds")
+saveRDS(D3_MusicDataset1950_2019, "../Data/cleaned_D3.rds")
+
+cat("Data exported successfully. Proceeding to pattern analysis.")
+
+```
+
+# Part B: Initial Data Preparation
+
+### Light Cleaning Performed
+
+1.  ✅ Removed URI prefix (`spotify:track:`)
+2.  ✅ Merged decade files and added `decade` labels
+3.  ✅ Dropped unnecessary column (`...1`)
+
+### Rationale
+
+These minimal transformations were performed during exploration to:
+
+-   Facilitate subsequent analysis
+-   Standardize identifier format
+-   Improve data structure clarity
+
+# Data Integration & Research Focus
+
+-   D1 (Billboard): Ensures that the research subjects are "market-validated" within the U.S. mainstream.
+-   D2 (Spotify): Provides "audio-sensory" analytical capabilities (e.g., danceability, energy).
+-   D3 (Music Dataset): Provides "lyrical sentiment" analytical capabilities (e.g., romantic, violence).
+
+# Geographic Consistency & Filtering Strategy
+
+Preliminary inspection shows that Data 3 includes a wide range of genres (e.g., Jazz, Reggae) and may contain tracks from non-U.S. markets. To ensure geographic consistency, this study will perform an Inner Join with the Billboard dataset during the data cleaning phase. This process will filter out tracks that did not enter the U.S. mainstream market, focusing the analysis on the American music landscape.
+
+# Time Coverage Comparison
+
+```{r}
+library(gt)
+
+time_coverage <- data.frame(
+  Dataset = c("D1 (Billboard Hot 100)", 
+              "D2 (Spotify Hit Predictor)", 
+              "D3 (Music Dataset 1950-2019)"),
+  Time_Range = c("1958 - 2021", 
+                 "1960s - 2010s", 
+                 "1950 - 2019"),
+  Granularity = c("Weekly", 
+                  "Decade", 
+                  "Yearly"),
+  Total_Records = c(330087, 
+                    41106, 
+                    28372)
+)
+
+time_coverage %>% 
+  gt() %>% 
+  tab_header(
+    title = "Dataset Time Coverage Summary"
+  ) %>% 
+  cols_label(
+    Dataset = "Dataset",
+    Time_Range = "Time Range",
+    Granularity = "Granularity",
+    Total_Records = "Total Records"
+  ) %>% 
+  fmt_number(
+    columns = Total_Records,
+    decimals = 0,
+    use_seps = TRUE
+  ) %>%
+  tab_options(
+    table.width = pct(100)
+  )
+```

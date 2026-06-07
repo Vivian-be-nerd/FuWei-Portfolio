@@ -1,0 +1,596 @@
+---
+title: "06 Modeling"
+author: "Fu Wei Hsu"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-location: right
+    toc-title: "On this page"
+    code-tools: true
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+editor: visual
+---
+
+# Executive Summary
+
+**Objective:** To identify which audio features best explain the characteristics of a Billboard Hit using two classification models: Logistic Regression and Random Forest.
+
+**Research Question:** Which audio features are most strongly associated with a song's chart performance?
+
+**Methodology:**
+
+- **Logistic Regression:** Used to interpret the direction and magnitude of the association for each feature.
+
+- **Random Forest:** Used to validate feature importance and capture potential non-linear relationships.
+
+**Note:**
+
+This research employs Explanatory Analysis rather than predictive modeling. The goal is to identify historical features associated with hits, not to build a system for predicting future songs.
+
+The model is trained on pooled data across six decades. Given that musical trends evolve over time, feature importance may vary by era. Future research could explore decade-specific models to capture temporal variation.
+
+------------------------------------------------------------------------
+
+# Setup
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(gt)
+library(caret)        # train/test split, confusion matrix
+library(randomForest) # Random Forest
+library(pROC)         # AUC / ROC curve
+library(broom)        # tidy model output
+```
+
+# Build Modeling Dataset
+
+```{r}
+# -- Modeling directly with D2 raw data ----------------
+# D2 contains complete hit(1) and flop(0) records
+# It is already a 50/50 balanced dataset, no resampling needed
+D2_model <- readRDS("../Data/wrangled_D2.rds") %>%
+  # Convert target to factor for classification models
+  mutate(target = as.factor(target)) %>%
+  # Keep only the features required for modeling
+  select(
+    target,           # Target Variable: 1 = Hit, 0 = Flop
+    danceability,     # Danceability
+    energy,           # Energy
+    loudness,         # Loudness
+    speechiness,      # Speechiness
+    acousticness,     # Acousticness
+    instrumentalness, # Instrumentalness
+    liveness,         # Liveness
+    valence,          # Valence
+    tempo,            # Tempo
+    duration_ms       # Song Duration
+  ) %>%
+  drop_na()
+
+cat("Total Records:    ", nrow(D2_model), "\n")
+cat("Hit (1) Count:    ", sum(D2_model$target == 1), "\n")
+cat("Flop (0) Count:   ", sum(D2_model$target == 0), "\n")
+cat("Hit Percentage:   ",
+    round(sum(D2_model$target == 1) / nrow(D2_model) * 100, 2), "%\n")
+```
+
+# Train / Test Split
+
+```{r}
+# 80/20 Random Split
+set.seed(42)
+
+train_index <- createDataPartition(
+  D2_model$target,
+  p    = 0.8,
+  list = FALSE
+)
+
+train_data <- D2_model[train_index, ]   # 80% Training Set
+test_data  <- D2_model[-train_index, ]  # 20% Testing Set
+
+cat("Train set size: ", nrow(train_data), "\n")
+cat("Test set size:  ", nrow(test_data),  "\n\n")
+
+# Verify hit/flop balance in both subsets
+cat("Train set Hit ratio: ",
+    round(sum(train_data$target == 1) / nrow(train_data) * 100, 2), "%\n")
+cat("Test set  Hit ratio: ",
+    round(sum(test_data$target == 1)  / nrow(test_data)  * 100, 2), "%\n")
+```
+
+# Part 1: Logistic Regression
+
+## 1.1 Model Construction
+
+```{r}
+# Build Logistic Regression Model
+# Use all audio features to predict target (hit/flop)
+logistic_model <- glm(
+  target ~ danceability + energy + loudness +
+           speechiness + acousticness + instrumentalness +
+           liveness + valence + tempo + duration_ms,
+  data   = train_data,
+  family = binomial
+)
+```
+
+## 1.2 Model Summary
+
+```{r}
+# Coefficient Summary
+tidy(logistic_model) %>%
+  mutate(
+    significant = ifelse(p.value < 0.05, "Yes", "No"),
+    direction   = ifelse(estimate > 0, "↑ Positive", "↓ Negative")
+  ) %>%
+  arrange(p.value) %>%
+  gt() %>%
+  tab_header(
+    title    = "Logistic Regression Coefficients",
+    subtitle = "Sorted by significance (p-value)"
+  ) %>%
+  fmt_number(
+    columns  = c(estimate, std.error, statistic, p.value),
+    decimals = 4
+  ) %>%
+  cols_label(
+    term        = "Feature",
+    estimate    = "Coefficient",
+    std.error   = "Std Error",
+    statistic   = "Z-value",
+    p.value     = "P-value",
+    significant = "Significant?",
+    direction   = "Direction"
+  )
+```
+
+## 1.3 Feature Importance Visualization
+
+```{r, fig.width = 10, fig.height = 6}
+# Coefficient Plot: Visualizing Direction and Magnitude 
+# Highlights significant features (p < 0.05)
+tidy(logistic_model) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(
+    term      = fct_reorder(term, estimate),
+    direction = ifelse(estimate > 0, "Positive", "Negative"),
+    significant = p.value < 0.05
+  ) %>%
+  ggplot(aes(x = term, y = estimate, fill = direction)) +
+  geom_col(aes(alpha = significant)) +
+  geom_errorbar(
+    aes(ymin = estimate - std.error,
+        ymax = estimate + std.error),
+    width = 0.3
+  ) +
+  scale_fill_manual(values = c(
+    "Positive" = "#27AE60",
+    "Negative" = "#E74C3C"
+  )) +
+  scale_alpha_manual(
+    values = c("TRUE" = 1, "FALSE" = 0.3),
+    guide  = "none"
+  ) +
+  geom_hline(yintercept = 0, linetype = "dashed",
+             color = "gray50") +
+  coord_flip() +
+  labs(
+    title    = "Logistic Regression: Feature Coefficients",
+    subtitle = "Green = positive association with Hit | Red = negative | Transparent = not significant",
+    x        = "Audio Feature",
+    y        = "Coefficient",
+    fill     = "Direction",
+    caption  = "Source: Spotify Hit Predictor Dataset"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 9, color = "gray40"),
+    legend.position = "bottom"
+  )
+
+```
+
+## 1.4 Model Evaluation
+
+```{r}
+# -- Evaluate performance on Test Set ----------------
+
+# Predicted probabilities
+pred_prob <- predict(logistic_model,
+                     newdata = test_data,
+                     type    = "response")
+
+# Convert probability to class (threshold = 0.5)
+pred_class <- ifelse(pred_prob > 0.5, 1, 0) %>%
+  as.factor()
+
+# Confusion Matrix
+cm <- confusionMatrix(pred_class, test_data$target,
+                      positive = "1")
+print(cm)
+
+# AUC / ROC Curve
+roc_obj <- roc(as.numeric(test_data$target),
+               as.numeric(pred_prob))
+
+cat("\n========================================\n")
+cat("Logistic Regression Evaluation\n")
+cat("========================================\n\n")
+cat("Accuracy:", round(cm$overall["Accuracy"], 4), "\n")
+cat("AUC:     ", round(auc(roc_obj), 4), "\n")
+```
+
+```{r, fig.width = 8, fig.height = 6}
+# -- ROC Curve ------------------------------------
+# AUC closer to 1 indicates better performance
+# 0.5 = random guessing
+plot(roc_obj,
+     main = "ROC Curve - Logistic Regression",
+     col  = "#E74C3C",
+     lwd  = 2)
+abline(a = 0, b = 1, lty = 2, col = "gray50")
+legend("bottomright",
+       legend = paste("AUC =", round(auc(roc_obj), 4)),
+       col    = "#E74C3C",
+       lwd    = 2)
+```
+
+**Note** Audio features alone can predict chart success with 72.3% accuracy and an AUC of 0.80, suggesting that the sonic characteristics of a song are meaningfully associated with its commercial appeal — though not deterministic, as approximately 28% of cases remain unexplained by audio features alone.
+
+# Part 2: Random Forest
+
+## 2.1 Model Building
+
+```{r rf-model}
+# Build Random Forest Model
+# ntree = 500: Build 500 decision trees
+# importance = TRUE: Calculate importance for each feature
+# set.seed ensures reproducibility
+set.seed(42)
+
+rf_model <- randomForest(
+  target ~ danceability + energy + loudness +
+            speechiness + acousticness + instrumentalness +
+            liveness + valence + tempo + duration_ms,
+  data       = train_data,
+  ntree      = 500,
+  importance = TRUE
+)
+
+print(rf_model)
+```
+
+## 2.2 Feature Importance
+
+```{r}
+# MeanDecreaseAccuracy: How much accuracy decreases when the feature is removed
+# MeanDecreaseGini: Contribution of the feature to node purity
+# Higher values indicate more important features
+importance_df <- importance(rf_model) %>%
+  as.data.frame() %>%
+  rownames_to_column("feature") %>%
+  arrange(desc(MeanDecreaseAccuracy))
+
+cat("Feature Importance Ranking:\n\n")
+importance_df %>%
+  gt() %>%
+  tab_header(
+    title    = "Random Forest Feature Importance",
+    subtitle = "Sorted by Mean Decrease Accuracy"
+  ) %>%
+  fmt_number(
+    columns  = c(MeanDecreaseAccuracy, MeanDecreaseGini),
+    decimals = 4
+  ) %>%
+  cols_label(
+    feature              = "Audio Feature",
+    MeanDecreaseAccuracy = "Mean Decrease Accuracy",
+    MeanDecreaseGini     = "Mean Decrease Gini"
+  ) %>%
+  data_color(
+    columns = MeanDecreaseAccuracy,
+    palette = "Greens"
+  )
+```
+
+## 2.3 Feature Importance Visualization
+
+```{r, fig.width = 10, fig.height = 6}
+# Feature Importance Bar Plot
+# Sorted by MeanDecreaseAccuracy
+# Longer bars represent features that are more important to the model
+importance_df %>%
+  mutate(feature = fct_reorder(feature, MeanDecreaseAccuracy)) %>%
+  ggplot(aes(x = feature, y = MeanDecreaseAccuracy)) +
+  geom_col(fill = "#27AE60", alpha = 0.85) +
+  geom_text(aes(label = round(MeanDecreaseAccuracy, 3)),
+            hjust = -0.2, size = 3.5, fontface = "bold") +
+  coord_flip() +
+  labs(
+    title    = "Random Forest: Feature Importance",
+    subtitle = "Mean Decrease in Accuracy when feature is removed",
+    x        = "Audio Feature",
+    y        = "Mean Decrease Accuracy",
+    caption  = "Source: Spotify Hit Predictor Dataset"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 10, color = "gray40")
+  )
+
+```
+
+## 2.4 Model Evaluation
+
+```{r rf-evaluation}
+# Evaluate model performance on Test Set
+# Predict categories
+rf_pred_class <- predict(rf_model,
+                         newdata = test_data,
+                         type    = "class")
+
+# Predict probabilities (for AUC calculation)
+rf_pred_prob <- predict(rf_model,
+                        newdata = test_data,
+                        type    = "prob")[, 2]
+
+# Confusion Matrix
+rf_cm <- confusionMatrix(rf_pred_class, test_data$target,
+                         positive = "1")
+print(rf_cm)
+
+# AUC
+rf_roc <- roc(as.numeric(test_data$target),
+              as.numeric(rf_pred_prob))
+
+cat("\n========================================\n")
+cat("Random Forest Model Evaluation\n")
+cat("========================================\n\n")
+cat("Accuracy:", round(rf_cm$overall["Accuracy"], 4), "\n")
+cat("AUC:     ", round(auc(rf_roc), 4), "\n")
+
+
+```
+
+```{r, fig.width = 8, fig.height = 6}
+# ROC Curve
+plot(rf_roc,
+     main = "ROC Curve - Random Forest",
+     col  = "#27AE60",
+     lwd  = 2)
+abline(a = 0, b = 1, lty = 2, col = "gray50")
+legend("bottomright",
+       legend = paste("AUC =", round(auc(rf_roc), 4)),
+       col    = "#27AE60",
+       lwd    = 2)
+```
+
+**Note** Random Forest achieved higher accuracy (78.8% vs 72.3%) and AUC (0.87 vs 0.80) compared to Logistic Regression, suggesting that the relationship between audio features and chart success contains non-linear patterns that Logistic Regression cannot fully capture.
+
+# Part 3: Model Comparison
+
+## 3.1 Performance Comparison Table
+
+```{r}
+# Create comparison table for both models
+comparison_df <- tibble(
+  Model    = c("Logistic Regression", "Random Forest"),
+  Accuracy = c(
+    round(cm$overall["Accuracy"], 4),
+    round(rf_cm$overall["Accuracy"], 4)
+  ),
+  AUC = c(
+    round(auc(roc_obj), 4),
+    round(auc(rf_roc), 4)
+  ),
+  Sensitivity = c(
+    round(cm$byClass["Sensitivity"], 4),
+    round(rf_cm$byClass["Sensitivity"], 4)
+  ),
+  Specificity = c(
+    round(cm$byClass["Specificity"], 4),
+    round(rf_cm$byClass["Specificity"], 4)
+  )
+)
+
+comparison_df %>%
+  gt() %>%
+  tab_header(
+    title    = "Model Performance Comparison",
+    subtitle = "Logistic Regression vs Random Forest"
+  ) %>%
+  fmt_number(
+    columns  = c(Accuracy, AUC, Sensitivity, Specificity),
+    decimals = 4
+  ) %>%
+  data_color(
+    columns = c(Accuracy, AUC),
+    palette = "Greens"
+  ) %>%
+  cols_label(
+    Model       = "Model",
+    Accuracy    = "Accuracy",
+    AUC         = "AUC",
+    Sensitivity = "Sensitivity (Hit)",
+    Specificity = "Specificity (Flop)"
+  )
+```
+
+## 3.2 ROC Curve Comparison
+
+```{r, fig.width = 8, fig.height = 6}
+# Plot both ROC Curves on the same graph 
+# Facilitates visual comparison of classification power between models
+plot(roc_obj,
+     main = "ROC Curve Comparison",
+     col  = "#E74C3C",
+     lwd  = 2)
+plot(rf_roc,
+     add = TRUE,
+     col = "#27AE60",
+     lwd = 2)
+abline(a = 0, b = 1,
+       lty = 2, col = "gray50")
+legend(
+  "bottomright",
+  legend = c(
+    paste("Logistic Regression (AUC =",
+          round(auc(roc_obj), 4), ")"),
+    paste("Random Forest (AUC =",
+          round(auc(rf_roc), 4), ")")
+  ),
+  col = c("#E74C3C", "#27AE60"),
+  lwd = 2
+)
+```
+
+## 3.3 Feature Importance Comparison
+
+```{r, fig.width = 12, fig.height = 6}
+# ── Compare feature importance across both models ────
+# Logistic Regression: uses absolute value of coefficients
+# Random Forest: uses MeanDecreaseAccuracy
+# Standardized to 0-1 for direct comparison
+
+# Logistic Regression Feature Importance
+lr_importance <- tidy(logistic_model) %>%
+  filter(term != "(Intercept)") %>%
+  mutate(
+    feature    = term,
+    importance = abs(estimate),
+    # Scaled to 0-1
+    importance_scaled = (importance - min(importance)) /
+                        (max(importance) - min(importance)),
+    model = "Logistic Regression"
+  ) %>%
+  select(feature, importance_scaled, model)
+
+# Random Forest Feature Importance
+rf_importance <- importance_df %>%
+  mutate(
+    feature    = feature,
+    importance = MeanDecreaseAccuracy,
+    # Scaled to 0-1
+    importance_scaled = (importance - min(importance)) /
+                        (max(importance) - min(importance)),
+    model = "Random Forest"
+  ) %>%
+  select(feature, importance_scaled, model)
+
+# Combine importance data from both models
+combined_importance <- bind_rows(lr_importance, rf_importance)
+
+# Visualization
+combined_importance %>%
+  ggplot(aes(x = reorder(feature, importance_scaled),
+             y = importance_scaled,
+             fill = model)) +
+  geom_col(position = "dodge", alpha = 0.85) +
+  scale_fill_manual(values = c(
+    "Logistic Regression" = "#E74C3C",
+    "Random Forest"       = "#27AE60"
+  )) +
+  coord_flip() +
+  labs(
+    title    = "Feature Importance Comparison",
+    subtitle = "Logistic Regression (scaled coefficients) vs Random Forest (Mean Decrease Accuracy)",
+    x        = "Audio Feature",
+    y        = "Scaled Importance (0–1)",
+    fill     = "Model",
+    caption  = "Source: Spotify Hit Predictor Dataset"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title    = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 9, color = "gray40"),
+    legend.position = "bottom"
+  )
+
+```
+
+**Note**
+
+The audio features most strongly associated with chart success are instrumentalness (negative), danceability (positive), speechiness (positive), and acousticness (negative). These findings suggest that a typical Billboard hit tends to feature vocals, danceable rhythms, spoken-word elements, and electronic production — consistent with the dominance of Hip-Hop and Pop in the modern era.
+
+## 3.4 Conclusion
+
+**Research Question**
+
+Which audio features are most strongly associated with a song's chart performance?
+
+**Model Performance Summary**
+
+- Logistic Regression: Accuracy ≈ 0.723 \| AUC ≈ 0.803
+
+- Random Forest: Accuracy ≈ 0.788 \| AUC ≈ 0.868
+
+**Key Findings**
+
+1.  Model Superiority:
+
+Random Forest outperformed Logistic Regression, suggesting that the relationship between audio features and "hits" involves non-linear components that a linear model cannot fully capture.
+
+2.  Shared Importance:
+
+Both models consistently identified specific features as critical predictors (refer to the comparison chart in Section 3.3).
+
+3.  Explanatory Power:
+
+An AUC of 0.87 indicates strong discriminative ability. However, approximately 21% of the variance remains unexplained by audio features alone, highlighting the importance of external factors like marketing and artist reputation.
+
+**Analysis Limitations**
+
+Temporal Bias: The model treats sixty years of data as a single pool, overlooking shifting musical standards across decades.
+
+Label Definition: The "hit/flop" labels are defined by the dataset author and may not perfectly align with official Billboard chart performance.
+
+# Part 4: Final Summary and Limitations
+
+**Project Purpose**
+
+This analysis explores the association between Spotify audio features and commercial chart success (Explanatory Analysis).
+
+**Dataset Overview**
+
+- Source: Spotify Hit Predictor (D2)
+
+- Sample Size: \~40,000 tracks (Balanced: 50% Hit / 50% Flop)
+
+- Time Range: 1960s – 2010s
+
+| Model               | Accuracy |  AUC   |
+|:--------------------|:--------:|:------:|
+| Logistic Regression |  0.7230  | 0.8032 |
+| Random Forest       |  0.7878  | 0.8682 |
+
+As shown in Section 3.1, Random Forest outperformed Logistic Regression across all metrics.
+
+**Core Conclusion**
+
+Audio features alone can predict chart success with reasonable accuracy (AUC = 0.87). This suggests that the sonic characteristics of a song are meaningfully associated with its commercial appeal—though they are not the sole determinants of success.
+
+**Research Limitations**
+
+- Temporal Consistency:
+
+Standards for a "hit" have evolved; the model does not account for era-specific trends.
+
+- Operational Definitions:
+
+Labels are proxy indicators based on specific dataset criteria rather than universal industry standards.
+
+- Missing Variables:
+
+Critical non-musical factors such as marketing budgets, social media presence, and artist fame were not included.
+
+- Genre Bias:
+
+Variations in audio feature distributions across genres may influence the model's fairness and generalizability.
