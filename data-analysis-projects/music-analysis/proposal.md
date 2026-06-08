@@ -1,11 +1,11 @@
-# Music Hit Prediction: A Six-Decade Analysis
+# Music Hit Analysis: A Six-Decade Study
 ### Billboard Hot 100 × Spotify Audio Features × Lyrical Themes (1960–2019)
 
 ---
 
 ## Project Overview
 
-This project explores what makes a song a hit on the U.S. Billboard Hot 100 over the past six decades (1960–2019). Focusing exclusively on the U.S. market, and by combining Billboard chart data with Spotify audio features, I aim to uncover how musical characteristics — such as danceability, energy, valence, and speechiness — have shifted over time, and which of these features are most predictive of chart success.
+This project explores what makes a song a hit on the U.S. Billboard Hot 100 over the past six decades (1960–2019). Focusing exclusively on the U.S. market, and by combining Billboard chart data with Spotify audio features, I aim to uncover how musical characteristics — such as danceability, energy, valence, and speechiness — have shifted over time, and which of these features are most associated of chart success.
 
 ---
 
@@ -14,7 +14,7 @@ This project explores what makes a song a hit on the U.S. Billboard Hot 100 over
 1. How has the genre distribution of Billboard Hot 100 songs changed across decades?
 2. Does musical mood (valence) decline during periods of social unrest, such as the Vietnam War era or post-9/11?
 3. Does the rise of speechiness in popular music reflect the mainstreaming of Hip-Hop?
-4. Which audio features best predict whether a song will become a chart hit?
+4. Which audio features best classify whether a song is a chart hit?
 
 ---
 
@@ -62,7 +62,7 @@ During the initial data exploration phase, the following observations were made:
 03 Data Wrangling      → Clean and standardize datasets
 04 Data Joining        → Merge three datasets on song/artist
 05 EDA                 → Visualize six decades of music trends
-06 Modeling            → Predict chart success with ML models
+06 Modeling            → Classify chart success with ML models
 07 Final Report        → Integrate findings into narrative report
 ```
 
@@ -91,6 +91,6 @@ During the initial data exploration phase, the following observations were made:
 ## Technical Objectives
 
 - **R Markdown**: Produce a well-structured, reproducible HTML report that integrates code, visualizations, and narrative.
-- **Machine Learning**: Apply and compare Logistic Regression and Random Forest classification models to predict chart success, including feature importance analysis.
+- **Machine Learning**: Apply and compare Logistic Regression and Random Forest classification models to classify chart success.
 - **Data Visualization**: Build clear and compelling time-series and comparison charts to communicate trends across six decades.
 - **Python Pipeline**: Convert the R-based analysis into a reusable Python pipeline using pandas and scikit-learn.
