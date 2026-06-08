@@ -11,7 +11,7 @@ Built from real project experience — applicable to any structured dataset.
 
 When I converted my R-based music analysis project into Python, I documented every decision, common mistake, and best practice into reusable guides.
 
-These templates can be applied to **any structured dataset**, not just music data.
+These templates are designed to be reusable across any structured dataset — not just music data.
 
 > 💡 **See it in action:**  
 > These guides were built from the [Music Hit Analysis: A Six-Decade Study](../data-analysis-projects/music-analysis/proposal.md)  
