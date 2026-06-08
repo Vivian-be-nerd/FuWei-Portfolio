@@ -233,16 +233,16 @@ df.isna().sum()
          ↓
 3.2 Column Names
   → list(df)
-  ↓
+         ↓
 3.3 Column Value Check
   1. Duplicate Check      ← Always first!
   2. Column Reference     ← Understand each column
   3. check_data_quality   ← Health check (NaN, 0, blank)
-  ↓
+         ↓
 3.4 Detailed Info
   → df.info()
   → df.isna().sum()
-  ↓
+         ↓
 Is 0 valid?
   → Check business logic of that column
   → Not sure → Check official documentation
