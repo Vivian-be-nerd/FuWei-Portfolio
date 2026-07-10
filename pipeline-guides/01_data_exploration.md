@@ -24,6 +24,14 @@ flowchart TD
 **Purpose:** Understand data quality and characteristics to prepare for further analysis
 **Last Updated:** July 2026
 
+**Datasets used in this project:**
+
+| Dataset | Source |
+|---|---|
+| D1 Billboard Hot 100 | [Kaggle →](https://www.kaggle.com/datasets/dhruvildave/billboard-the-hot-100-songs) |
+| D2 Spotify Hit Predictor | [Kaggle →](https://www.kaggle.com/datasets/theoverman/the-spotify-hit-predictor-dataset) |
+| D3 Music Dataset 1950-2019 | [Kaggle →](https://www.kaggle.com/datasets/saurabhshahane/music-dataset-1950-to-2019) |
+
 ---
 
 ## The Core Design Principle: CONFIG / Engine Separation
@@ -56,7 +64,7 @@ df  = cfg["load"](DATA_DIR)
 run_exploration(df, cfg["name"], cfg["date_col"], cfg["col_defs"], cfg["advanced_nan"], cfg.get("chart_size"))
 ```
 
-Adding a new dataset means adding one new entry to `DATASETS`. Nothing inside `run_exploration()` changes.
+Adding a new dataset means adding one new entry to `DATASETS`. Nothing inside `run_exploration()` changes. This includes how each dataset is loaded — for example, D2 above needs to merge 6 separate CSVs (`loop + pd.concat()`), while D1 is a plain `pd.read_csv()` and D3 needs `index_col=0` to drop an extra index column. All three of those loading strategies live inside `DATASETS`, not inside the engine.
 
 ---
 
@@ -113,7 +121,7 @@ Read the [STEP 7] Summary
 
 | Mistake | Cause | Fix |
 |---|---|---|
-| Using `pd.to_datetime()` on year-only columns | Assumed it was a full date | Check column format first |
+| Using `pd.to_datetime()` on year-only columns | Assumed it was a full date | Check column format first — `1950` becomes a nonsense timestamp if you force it through `pd.to_datetime()` |
 | Writing dataset-specific logic inside the engine function | Confusing CONFIG with Engine | Anything dataset-specific belongs in `DATASETS`, not in `run_exploration()` |
 | Treating IQR outliers as errors | Assumed "statistically unusual" means "wrong" | Always review outliers manually; only [WARN]/[OK] business-rule checks are safe to automate |
 | Treating all NaN as errors | No understanding of business logic | Understand column meaning first — some NaN is expected (see Step 5) |

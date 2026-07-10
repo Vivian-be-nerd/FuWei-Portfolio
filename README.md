@@ -146,6 +146,6 @@ I combine business acumen with technical skills in data visualization, statistic
 
 For collaboration or questions about these projects:
 
-- **Email**: fuwei.hsu1988@gmail.com
+- **Email**: vivianfuwei88@gmail.com
 - **LinkedIn**: [Fu Wei Hsu](https://www.linkedin.com/in/vivianfuweihsu)
 - **GitHub**: [@Vivian-be-nerd](https://github.com/Vivian-be-nerd)
