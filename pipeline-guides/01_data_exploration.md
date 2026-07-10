@@ -125,7 +125,6 @@ Read the [STEP 7] Summary
 | Writing dataset-specific logic inside the engine function | Confusing CONFIG with Engine | Anything dataset-specific belongs in `DATASETS`, not in `run_exploration()` |
 | Treating IQR outliers as errors | Assumed "statistically unusual" means "wrong" | Always review outliers manually; only [WARN]/[OK] business-rule checks are safe to automate |
 | Treating all NaN as errors | No understanding of business logic | Understand column meaning first — some NaN is expected (see Step 5) |
-| Forgetting to sync `.py` and `.ipynb` versions | Edited one, not the other | Both should implement `run_exploration()` identically |
 
 ---
 
