@@ -39,7 +39,9 @@ Use these answers to prioritize and flag relevant listings in Step 3. Do not ski
 
 ## Step 2: Scrape Handshake via Playwright MCP
 
-1. Navigate to the student's OU Handshake Career Fair Employers tab (URL pattern: `https://oakland.joinhandshake.com/stu/career_fairs/[FAIR_ID]/employers_list?page=1&per_page=25`). If the student does not know the fair ID, have them open the Career Fair page in their own Handshake and copy the URL.
+**Finding the right Career Fair first**: Every fair has its own ID number in the URL (e.g. `.../career_fairs/64690/...`), and it's different every semester — do not assume it's the same one used before. Ask the student which fair they mean (e.g. "Fall Career Fair 2026"), then have them find it themselves: **Handshake → Events → find that fair in the list → click into it → copy the URL from the browser address bar and paste it here.** Confirm the fair name and date with the student before scraping, so you don't accidentally pull the wrong semester's data.
+
+1. Navigate to the student's OU Handshake Career Fair Employers tab (URL pattern: `https://oakland.joinhandshake.com/stu/career_fairs/[FAIR_ID]/employers_list?page=1&per_page=25`, using the fair ID found above).
 2. For each employer, visit `https://oakland.joinhandshake.com/e/[EMPLOYER_ID]/jobs` to see their posted roles (if any — many employers register without posting a specific job).
 3. Also check the Career Fair's Jobs tab directly (`.../career_fairs/[FAIR_ID]/jobs`) for postings not tied to a specific employer page.
 4. Record for each employer/job: company name, industry, job position (or "not yet posted" if the employer registered without a listing), a one-line job description, job type (Full-time/Part-time/Internship), location, and whether the listing mentions OPT/CPT/visa sponsorship (`yes` / `no` / `not stated` — only mark `no` if the posting explicitly excludes sponsorship, do not guess).
