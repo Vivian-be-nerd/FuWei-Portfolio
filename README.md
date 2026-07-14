@@ -17,6 +17,7 @@ I combine business acumen with technical skills in data visualization, statistic
 
 - 🐍 **Python Data Analysis Pipeline** — Converting R-based music analysis projects into Python, building reusable analysis templates
 - 📋 **Data Pipeline Guides (01–07)** — Standardized rules for each stage of the analysis pipeline
+- 🤖 **Claude Skills** — Building AI agent workflows to automate job search research
 - 🔜 **SQL Projects** — Database design and query optimization (coming soon)
 
 *This portfolio is continuously updated as I learn and grow.*
@@ -32,7 +33,7 @@ I combine business acumen with technical skills in data visualization, statistic
 | 2025 Q4 | SQL Server, Data Warehousing (SSMS, SSIS, SSRS) | ✅ Completed |
 | 2026 Q1 | Advanced Database, R & Python, Machine Learning (SAS) | ✅ Completed |
 | 2026 Q2 | Python Data Analysis Pipeline | 🔨 In Progress |
-| 2026 Q3 | Claude Code, Agent Development | 🔜 Planned |
+| 2026 Q3 | Claude Code, Agent Development | 🔨 In Progress |
 | 2026 Q4 | End-to-end Automated Pipeline | 🔜 Planned |
 
 ---
@@ -95,6 +96,19 @@ I combine business acumen with technical skills in data visualization, statistic
 - R version: ✅ Complete (01–07)
 - Python version: 🔨 In Progress
 - [View Project →](./data-analysis-projects/music-analysis/)
+
+---
+
+### 🤖 Claude Skills Projects
+
+**1. OU Handshake Career Fair Tracker**
+> Claude Code skill that scrapes Oakland University's Handshake Career Fair listings into a live Excel tracker, star-rated by relevance to your major and target role
+
+- **Tools**: Claude Code, Playwright MCP (browser automation), Python (openpyxl)
+- **Key Skills**: Agent workflow design, browser automation, data pipeline design for non-technical end users
+- [View Project →](./claude-skills-projects/ou-handshake-tracker/)
+
+*[View all Claude Skills projects →](./claude-skills-projects/ClaudeSkills_README.md)*
 
 ---
 
