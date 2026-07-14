@@ -1,6 +1,6 @@
 ---
 name: ou-handshake-tracker
-description: Scrapes Oakland University's Handshake Career Fair employer and job listings into a formatted Excel tracker, filtered by the student's year, major, and target role type. Use this skill whenever a user wants to track Career Fair employers, organize Handshake job listings into a spreadsheet, or asks for help keeping an up-to-date list of companies attending an OU Career Fair. Make sure to use this skill any time the user mentions Handshake, Career Fair, OU job tracking, or wants a weekly-refreshed spreadsheet of career fair employers, even if they don't explicitly ask for a "tracker" or "skill" by name.
+description: Scrapes Oakland University's Handshake Career Fair employer and job listings into a formatted Excel tracker, star-rated by relevance to the student's year, major, and target role type. Use this skill whenever a user wants to track Career Fair employers, organize Handshake job listings into a spreadsheet, or asks for help keeping an up-to-date list of companies attending an OU Career Fair. Make sure to use this skill any time the user mentions Handshake, Career Fair, OU job tracking, or wants a weekly-refreshed spreadsheet of career fair employers, even if they don't explicitly ask for a "tracker" or "skill" by name.
 ---
 
 # OU Handshake Career Fair Tracker
@@ -9,7 +9,7 @@ Turns Oakland University's Handshake Career Fair listings into an organized, alw
 
 ## Who this is for
 
-Any Oakland University student searching for a job or internship who wants a running spreadsheet of Career Fair employers instead of manually browsing Handshake. Works for any major or year — the filtering step below adapts to the student.
+Any Oakland University student searching for a job or internship who wants a running spreadsheet of Career Fair employers instead of manually browsing Handshake. Works for any major or year — the relevance-rating step below adapts to the student.
 
 ## Not just Handshake
 
@@ -35,11 +35,11 @@ Then ask:
 
 Save the answers to a small local file (e.g. `my-profile.md`, next to the student's own tracker copy, **not** inside this skill's shared folder) so future runs don't need to repeat this interview. On later runs, just confirm: "Same search profile as last time (year/major/keywords), or do you want to update it?"
 
-Use these answers to prioritize and flag relevant listings in Step 3. Do not skip this — a generic unfiltered dump of every Career Fair employer is not useful to the student.
+Use these answers to prioritize and flag relevant listings in Step 3. Do not skip this — a generic, unrated dump of every Career Fair employer is not useful to the student.
 
 ## Step 2: Scrape Handshake via Playwright MCP
 
-**Finding the right Career Fair first**: Every fair has its own ID number in the URL (e.g. `.../career_fairs/64690/...`), and it's different every semester — do not assume it's the same one used before. Ask the student which fair they mean (e.g. "Fall Career Fair 2026"), then have them find it themselves: **Handshake → Events → find that fair in the list → click into it → copy the URL from the browser address bar and paste it here.** Confirm the fair name and date with the student before scraping, so you don't accidentally pull the wrong semester's data.
+**Finding the right Career Fair first**: Every fair has its own ID number in the URL (e.g. `.../career_fairs/64690/...`), and it's different every semester — do not assume it's the same one used before. Ask the student which fair they mean, and offer the current default as a starting point: "Are you looking to track Fall Career Fair 2026 (Tue, Sep 29, 2026)? If so, I can start from this page: `https://oakland.joinhandshake.com/stu/career_fairs/64690?ref=school-show-upcoming-career-fairs`." If the student confirms, use that link. If they mean a different fair (a future semester, or a different fair entirely), have them find it themselves instead: **Handshake → Events → find that fair in the list → click into it → copy the URL from the browser address bar and paste it here.** Either way, confirm the fair name and date with the student before scraping, so you don't accidentally pull the wrong semester's data — the default link above will go stale once Fall Career Fair 2026 has passed.
 
 1. Navigate to the student's OU Handshake Career Fair Employers tab (URL pattern: `https://oakland.joinhandshake.com/stu/career_fairs/[FAIR_ID]/employers_list?page=1&per_page=25`, using the fair ID found above).
 2. For each employer, visit `https://oakland.joinhandshake.com/e/[EMPLOYER_ID]/jobs` to see their posted roles (if any — many employers register without posting a specific job).
