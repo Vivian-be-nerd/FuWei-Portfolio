@@ -62,9 +62,11 @@ This only works because the *previous* stage (02) deliberately settled on one co
 
 The R version's closing note states the D1–D3 exact match rate is "approximately 10.6%." Running Step 5 on the Python version independently produced **10.63%** — a near-exact match without ever looking at that number while writing the code. That's a strong signal the full 01 → 02 → 03 chain is faithfully reproducing the original logic, not just superficially similar.
 
-### An inherited inconsistency, flagged rather than silently fixed
+### An inherited inconsistency — investigated, not just flagged
 
-R's `clean_d1_artist()` and `clean_d2_artist()` both lowercase before cleaning; `clean_d3_artist()` only trims — it never lowercases. This version reproduces that exact behavior (`lowercase: False` for D3 in `DATASETS`) rather than "fixing" it, because it's not clear whether that was a deliberate choice or an oversight in the original R script. The Step 3 health report prints an explicit note calling this out, so the inconsistency is visible and can be revisited deliberately later instead of being buried inside working code.
+R's `clean_d1_artist()` and `clean_d2_artist()` both lowercase before cleaning; `clean_d3_artist()` only trims — it never lowercases. The first instinct was to treat this as a likely oversight and consider "fixing" it. But a hypothesis about data quality should be checked against the data before acting on it: a direct scan of D3's raw `artist_name`/`track_name` columns showed **0 of 28,372 rows contain any uppercase letter at all** — the source data was already fully lowercase. R's missing lowercase step was never actually a data-quality bug; it was harmless because there was nothing for it to change.
+
+`lowercase: True` is still set for D3 in this version, but as defensive code (free, zero-risk, guards against a future raw CSV that isn't pre-lowercased) rather than as a correction to a real problem. Re-running Step 5's cross-dataset overlap check confirmed this directly: the D1∩D3 match count was bit-for-bit identical before and after the change (3,155 keys, 10.63%) — the numbers didn't move because there was nothing to move. The lesson: when R and Python disagree on some processing detail, check what actually happens to the data before deciding it needs fixing — sometimes the disagreement is real but harmless.
 
 ---
 
