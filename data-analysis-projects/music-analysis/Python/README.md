@@ -7,7 +7,7 @@ separation so new datasets only require adding a config entry, not new code.
 |------|-------|--------|
 | 01_data_exploration_auto.py | Data Exploration | ✅ Complete |
 | 02_data_pattern_analysis_auto.ipynb | Pattern Analysis | ✅ Complete |
-| 03_data_wrangling.py | Data Wrangling | 🔜 Planned |
+| 03_data_wrangling_auto.ipynb | Data Wrangling | ✅ Complete |
 | 04_data_Joining.py | Data Joining | 🔜 Planned |
 | 05_EDA.py | EDA | 🔜 Planned |
 | 06_modeling.py | Modeling | 🔜 Planned |
@@ -21,3 +21,8 @@ See [`pipeline-guides/02_data_pattern_analysis.md`](../../../pipeline-guides/02_
 for how `02_data_pattern_analysis_auto.ipynb` extends this design with a fourth
 layer — human judgment — since deciding what a text pattern *means* isn't
 something a regex can conclude on its own.
+
+See [`pipeline-guides/03_data_wrangling.md`](../../../pipeline-guides/03_data_wrangling.md)
+for how `03_data_wrangling_auto.ipynb` collapses R's six hand-written cleaning
+functions into one generic `clean_column()`, and how its cross-dataset join-key
+overlap independently reproduced R's reported match rate almost exactly.

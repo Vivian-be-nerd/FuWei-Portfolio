@@ -25,7 +25,7 @@ These templates are designed to be reusable across any structured dataset — no
 |-------|-------|-------------|--------|
 | [01 Data Exploration](./01_data_exploration.md) | Explore | Data quality check, validation rules, decision flow | ✅ Available |
 | [02 Data Pattern Analysis](./02_data_pattern_analysis.md) | Analyze | Text pattern detection, symbol/content classification, cleaning-rule design | ✅ Available |
-| 03 Data Wrangling | Clean | Missing values, standardization, encoding | 🔜 Coming Soon |
+| [03 Data Wrangling](./03_data_wrangling.md) | Clean | Execute cleaning rules, column alignment, join-key creation | ✅ Available |
 | 04 Data Joining | Merge | Join strategies, key matching, validation | 🔜 Coming Soon |
 | 05 EDA | Visualize | Exploratory visualization, trend analysis | 🔜 Coming Soon |
 | 06 Modeling | Model | Feature selection, model evaluation | 🔜 Coming Soon |
