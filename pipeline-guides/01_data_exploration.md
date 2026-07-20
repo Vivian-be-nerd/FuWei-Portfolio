@@ -66,6 +66,8 @@ run_exploration(df, cfg["name"], cfg["date_col"], cfg["col_defs"], cfg["advanced
 
 Adding a new dataset means adding one new entry to `DATASETS`. Nothing inside `run_exploration()` changes. This includes how each dataset is loaded — for example, D2 above needs to merge 6 separate CSVs (`loop + pd.concat()`), while D1 is a plain `pd.read_csv()` and D3 needs `index_col=0` to drop an extra index column. All three of those loading strategies live inside `DATASETS`, not inside the engine.
 
+**Not every dataset has a real date column, but that doesn't mean skip the year check entirely.** D1 has a full weekly `date` column, but D2 only carries a decade label (`'60s'`, `'70s'`, ...) and D3 has a plain integer year column (`release_date`). Both still carry real year information — Step 2 just needs to know how to read it. `year_col`/`year_col_type` covers the two fallback shapes (`year_int` for a bare integer year, `decade_label` for a `'NNs'`-style string), each handled without ever passing a year-only value through `pd.to_datetime()` — doing that mangles the value into a nonsense timestamp instead of a year (see Common Mistakes below).
+
 ---
 
 ## What `run_exploration()` Checks — 7 Steps + 1

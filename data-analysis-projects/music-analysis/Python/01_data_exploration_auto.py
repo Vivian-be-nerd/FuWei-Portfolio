@@ -41,6 +41,7 @@ KAGGLE_FILENAME = "charts.csv"
 # -- Shared settings --
 DATASET_NAME = "D1 Billboard Hot 100"
 DATE_COLUMN  = "date"   # Date column name, set None if not applicable
+SAVE_PATH    = None     # Where to save the validated data as .pkl for 02+ to read; None = don't save
 
 COLUMN_DEFS = {
     "date":           {"desc": "Weekly date (1958-2021)",   "zero_ok": False, "range": None},
@@ -98,8 +99,23 @@ def load_data(source, csv_path, kaggle_dataset, kaggle_filename):
         raise ValueError(f"SOURCE must be 'csv' or 'kaggle', got: {source}")
 
 
-def run_exploration(df, dataset_name, date_col, col_defs, advanced_nan, chart_size=None):
-    """Run the full 01 Data Exploration workflow."""
+def _parse_decade_label(label):
+    """Convert a 'NNs' decade shorthand (e.g. '60s', '00s') to a starting year.
+    Assumes the modern convention: 00-19 = 2000s/2010s, 20-99 = 1900s. Generic
+    across any decade-labeled dataset, not specific to D2."""
+    n = int(label.rstrip("sS"))
+    return 2000 + n if n < 20 else 1900 + n
+
+
+def run_exploration(df, dataset_name, date_col, col_defs, advanced_nan, chart_size=None,
+                     save_path=None, year_col=None, year_col_type=None):
+    """Run the full 01 Data Exploration workflow.
+
+    year_col / year_col_type: fallback for datasets with NO full date column but
+    that still carry *some* year signal -- e.g. a plain int year column
+    (year_col_type='year_int') or a decade-label column (year_col_type='decade_label').
+    Never fed through pd.to_datetime() -- that mangles year-only values (see
+    Common Mistakes: 'Year-only columns: NEVER use pd.to_datetime()')."""
 
     sep = "=" * 55
 
@@ -125,6 +141,16 @@ def run_exploration(df, dataset_name, date_col, col_defs, advanced_nan, chart_si
         print(f"  Date range : {min_y} - {max_y}  ({max_y - min_y} years)")
         if chart_size:
             print(f"  ~Weeks     : {rows // chart_size:,} weeks")
+    elif year_col and year_col in df.columns and year_col_type == "year_int":
+        min_y = int(df[year_col].min())
+        max_y = int(df[year_col].max())
+        print(f"  Date range : {min_y} - {max_y}  ({max_y - min_y} years)")
+        print(f"  Note       : from '{year_col}' (year-only column, not a full date -- no week-level detail)")
+    elif year_col and year_col in df.columns and year_col_type == "decade_label":
+        starts = sorted(_parse_decade_label(v) for v in df[year_col].unique())
+        min_y, max_y = starts[0], starts[-1] + 9
+        print(f"  Decade range : {min_y}s - {max_y - 9}s  (~{max_y - min_y} years, {len(starts)} decades represented)")
+        print(f"  Note         : from '{year_col}' (decade label only -- no exact per-row year available)")
     else:
         print(f"  No date column, skipping.")
 
@@ -241,6 +267,14 @@ def run_exploration(df, dataset_name, date_col, col_defs, advanced_nan, chart_si
     else:
         print(f"\n  [OK] No issues found. Data quality is good.")
 
+    # -- STEP 8: Save validated data to pickle (so 02+ can pick it up) --
+    print(f"\n[STEP 8] Save Validated Data")
+    if save_path:
+        df.to_pickle(save_path)
+        print(f"  [OK]  Saved to: {save_path}")
+    else:
+        print(f"  No save_path given, skipping. (02+ will not find a .pkl file for this dataset)")
+
     print(f"\n{sep}\n")
     return df
 
@@ -251,6 +285,7 @@ DATASETS = {
         "name": "D1 Billboard Hot 100",
         "date_col": "date",
         "chart_size": 100,
+        "save_path": r"..\Data\cleaned_D1.pkl",
         "load": lambda base: pd.read_csv(os.path.join(base, "Data1_charts.csv"), parse_dates=["date"]),
         "col_defs": {
             "date":           {"desc": "Weekly date",        "zero_ok": False, "range": None},
@@ -266,6 +301,9 @@ DATASETS = {
     "d2": {
         "name": "D2 Spotify Hit Predictor",
         "date_col": None,
+        "year_col": "decade",
+        "year_col_type": "decade_label",
+        "save_path": r"..\Data\cleaned_D2.pkl",
         "load": lambda base: pd.concat([
             pd.read_csv(os.path.join(base, f"Data2_dataset-of-{d}.csv")).assign(decade=d)
             for d in ["60s", "70s", "80s", "90s", "00s", "10s"]
@@ -295,6 +333,9 @@ DATASETS = {
     "d3": {
         "name": "D3 Music Dataset 1950-2019",
         "date_col": None,
+        "year_col": "release_date",
+        "year_col_type": "year_int",
+        "save_path": r"..\Data\cleaned_D3.pkl",
         "load": lambda base: pd.read_csv(os.path.join(base, "Data3_tcc_ceds_music.csv"), index_col=0),
         "col_defs": {
             "artist_name":      {"desc": "Artist name",      "zero_ok": False},
@@ -338,7 +379,9 @@ if __name__ == "__main__":
             print(f"\n[INFO] Loading {cfg['name']}...")
             try:
                 df = cfg["load"](args.data_dir)
-                run_exploration(df, cfg["name"], cfg["date_col"], cfg["col_defs"], cfg["advanced_nan"], cfg.get("chart_size"))
+                run_exploration(df, cfg["name"], cfg["date_col"], cfg["col_defs"], cfg["advanced_nan"],
+                                 cfg.get("chart_size"), cfg.get("save_path"),
+                                 cfg.get("year_col"), cfg.get("year_col_type"))
             except FileNotFoundError as e:
                 print(f"[ERROR] File not found: {e}")
                 print(f"        Check your Data folder path: {args.data_dir}")
@@ -347,10 +390,11 @@ if __name__ == "__main__":
     elif args.csv:
         df = load_data(source="csv", csv_path=args.csv,
                        kaggle_dataset=KAGGLE_DATASET, kaggle_filename=KAGGLE_FILENAME)
-        run_exploration(df, args.name or DATASET_NAME, DATE_COLUMN, COLUMN_DEFS, ADVANCED_NAN_CHECK)
+        run_exploration(df, args.name or DATASET_NAME, DATE_COLUMN, COLUMN_DEFS, ADVANCED_NAN_CHECK,
+                         save_path=SAVE_PATH)
 
     # -- Mode 3: fallback to CONFIG defaults --
     else:
         df = load_data(source=SOURCE, csv_path=CSV_PATH,
                        kaggle_dataset=KAGGLE_DATASET, kaggle_filename=KAGGLE_FILENAME)
-        run_exploration(df, DATASET_NAME, DATE_COLUMN, COLUMN_DEFS, ADVANCED_NAN_CHECK)
+        run_exploration(df, DATASET_NAME, DATE_COLUMN, COLUMN_DEFS, ADVANCED_NAN_CHECK, save_path=SAVE_PATH)
