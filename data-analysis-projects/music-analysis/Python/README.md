@@ -8,7 +8,7 @@ separation so new datasets only require adding a config entry, not new code.
 | 01_data_exploration_auto.py | Data Exploration | ✅ Complete |
 | 02_data_pattern_analysis_auto.ipynb | Pattern Analysis | ✅ Complete |
 | 03_data_wrangling_auto.ipynb | Data Wrangling | ✅ Complete |
-| 04_data_Joining.py | Data Joining | 🔜 Planned |
+| 04_data_Joining_auto.ipynb | Data Joining | ✅ Complete |
 | 05_EDA.py | EDA | 🔜 Planned |
 | 06_modeling.py | Modeling | 🔜 Planned |
 | 07_Final_Report.py | Final Report | 🔜 Planned |
@@ -26,3 +26,9 @@ See [`pipeline-guides/03_data_wrangling.md`](../../../pipeline-guides/03_data_wr
 for how `03_data_wrangling_auto.ipynb` collapses R's six hand-written cleaning
 functions into one generic `clean_column()`, and how its cross-dataset join-key
 overlap independently reproduced R's reported match rate almost exactly.
+
+See [`pipeline-guides/04_data_Joining.md`](../../../pipeline-guides/04_data_Joining.md)
+for how `04_data_Joining_auto.ipynb` merges an asymmetric pair of joins with one
+shared engine function, and the debugging story behind tracking a 0.04% match-rate
+gap against R down to two real config bugs — using R's actual regex source, not
+just its rendered output — until the primary join matched exactly.
