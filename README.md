@@ -122,7 +122,7 @@ I combine business acumen with technical skills in data visualization, statistic
 | [01 Data Exploration](./pipeline-guides/01_data_exploration.md) | Explore | Data quality check, validation rules | ✅ Available |
 | [02 Data Pattern Analysis](./pipeline-guides/02_data_pattern_analysis.md) | Analyze | Text pattern detection, symbol/content classification | ✅ Available |
 | [03 Data Wrangling](./pipeline-guides/03_data_wrangling.md) | Clean | Execute cleaning rules, column alignment, join-key creation | ✅ Available |
-| 04 Data Joining | Merge | Join strategies, validation | 🔜 Coming Soon |
+| [04 Data Joining](./pipeline-guides/04_data_Joining.md) | Merge | Join strategies, validation | ✅ Available |
 | 05 EDA | Visualize | Exploratory visualization | 🔜 Coming Soon |
 | 06 Modeling | Model | Feature selection, evaluation | 🔜 Coming Soon |
 | 07 Final Report | Report | Storytelling, presentation | 🔜 Coming Soon |
