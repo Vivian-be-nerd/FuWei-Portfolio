@@ -1,8 +1,8 @@
-# 📊 05 EDA Guide
+# 05 EDA
 
 ```mermaid
 flowchart TD
-    A[📊 05 EDA Guide] --> B[Step 1: Shared analysis_base]
+    A[05 EDA] --> B[Step 1: Shared analysis_base]
     A --> C[RQ1: Genre distribution by decade]
     A --> D[RQ2: Valence during social unrest]
     A --> E[RQ3: Speechiness & Hip-Hop mainstreaming]
@@ -10,114 +10,35 @@ flowchart TD
     B --> B1[Filter 1960-2019, D2-matched, add decade column]
 
     C --> C1[Steps 2-6: genre subset, stacked bar + line chart]
-    C --> C2[Coverage-bias check: D3 genre match rate is uneven across decades]
+    C --> C2[Coverage check: D3 genre match rate is uneven across decades]
 
     D --> D1[Steps 7-14: shared add_phase_backgrounds helper]
     D --> D2[Valence vs Energy divergence + sociopolitical/tech overlays]
-    D --> D3[Caught R's own chart labels contradicting its text/data]
-    D --> D4[Caught a hardcoded divergence-year annotation, resolved over 3 rounds]
 
     E --> E1[Steps 15-21: speechiness trend, decade + genre comparison]
-    E --> E2[Caught R's mean-of-means bug inflating the Hip-Hop ratio]
 ```
 
-## When NOT to Force CONFIG/Engine
+## What This Stage Did
 
-**Applicable to:** Any pipeline stage where the work is genuinely different per unit of analysis, not the same transform repeated
-**Purpose:** Turn 04's joined dataset into the three research-question narratives the project proposal promised, each with its own charts and interpretation — not a fourth loop over three interchangeable datasets
-**Last Updated:** July 2026
+Took 04's joined dataset and answered three of the four research questions from the project proposal:
 
----
+- **RQ1** — Has the genre mix on the Hot 100 shifted over six decades?
+- **RQ2** — Does mood (valence) track periods of social/tech upheaval?
+- **RQ3** — Does rising speechiness track Hip-Hop going mainstream?
 
-## The Core Design Principle: Recognizing When the Shape Isn't a Loop At All
+RQ4 (which audio features predict a hit) is a modeling question. That's 06, not this stage.
 
-Stages 01–04 apply CONFIG/engine separation because the *same logic* runs against multiple datasets (or, in 04's case, two genuinely different but structurally similar joins). Stage 05 is different in kind: three research questions, each requiring its own subset, its own chart types, and its own domain interpretation. Forcing a `RQ_CONFIG = {...}` dict here wouldn't remove complexity — it would just hide three unrelated analyses behind a shared shape they don't actually share.
+## How I Did It
 
-The discipline that *does* carry over: when the same sub-logic really does repeat — not "structurally similar" but "literally the same code" — pull it into a shared function anyway. RQ2 draws three different charts (feature trends, valence/energy divergence, two historical-context overlays) that all need the same three-era background shading and divider lines. R's `.qmd` pasted that block three times. Python extracts it once:
+Each research question gets its own subset of the data and its own charts. I didn't force the same CONFIG/engine pattern I used in 01–04, because each question needs different logic, not the same transform repeated three times. The one place I did pull out shared code: three of the RQ2 charts needed the same background shading, so that became one function instead of three separate copies.
 
-```python
-def add_phase_backgrounds(ax, label_y=0.90, alpha=0.06):
-    for start, end, color, label, text_color in PHASES:
-        ax.axvspan(start, end, color=color, alpha=alpha, zorder=0)
-        ...
-```
+I also didn't just port R's numbers over as-is. I recomputed everything myself and checked it against what R originally reported. That caught a few real issues: a chart label that had been typed by hand and never updated, a genre average that was calculated the wrong way (unweighted instead of weighted by song count), and a chart annotation marking the wrong year for when two trends started diverging.
 
-The lesson from 04 generalizes further than "CONFIG/engine is about where a decision lives, not how many times a loop runs" — it's really about *not letting the absence of a loop excuse real duplication*. A notebook can correctly skip CONFIG/engine at the top level and still owe the reader a shared helper for anything that's copy-pasted three times.
+## Open Questions / Things I'd Revisit
 
----
-
-## What Happens — 21 Steps Across 3 Research Questions
-
-| Step | What it does | Why |
-|---|---|---|
-| 1. Setup | Load 04's `D1_D2_D3_joined.pkl`, filter to 1960–2019 + D2-matched rows, derive `decade` | One shared foundation (`analysis_base`) — every RQ starts from the same base, computed once |
-| 2–6. RQ1 | Subset to D3-matched (genre-labeled) rows, tabulate genre % by decade, stacked bar + trend line | Does the genre mix of the Hot 100 shift across six decades? |
-| 7–14. RQ2 | Build `features_yearly` (5 audio features), shared `add_phase_backgrounds()`, valence trend, valence-vs-energy divergence, sociopolitical + tech-era overlays, decade summary table | Does musical mood track social/technological upheaval? |
-| 15–21. RQ3 | Speechiness by year/decade/genre, Hip-Hop vs Other Genres by decade | Does rising speechiness track Hip-Hop's mainstreaming? |
-
-**Scope note:** the project proposal's RQ4 ("which audio features best predict a chart hit") is a modeling question, deliberately deferred to 06 — confirmed against both the R `.qmd` Executive Summary and the original proposal text before starting, not assumed.
-
----
-
-## Three Validation Wins Worth Calling Out
-
-### 1. R's own chart labels didn't match its own numbers
-
-Re-running R's actual RQ2 logic through `Rscript.exe` (not just reading its rendered `.html`) turned up an internal contradiction inside the R source itself: the *text* narrative said valence declined "~0.670 → ~0.502," but the *hand-typed label* on the chart read "0.49"; the energy chart's hand-typed label read "0.73" against an actual computed value of 0.628. The labels were literal strings typed into the plotting code at some earlier point in the project and never re-synced after the data or computation changed — not a live-computed annotation.
-
-Python's `analysis_base` reproduced R's row count exactly (262,737) and its real computed values to the decimal (valence 0.650→0.503, energy 0.453→0.628). The fix wasn't a code change — it was trusting the freshly-computed number over a stale hardcoded label that merely *looked* authoritative because it was sitting inside the "official" R file.
-
-### 2. R's headline Hip-Hop statistic used the wrong kind of average
-
-R reported "Other Genres average 0.0646, Hip-Hop is 4.8x higher." Re-verifying against a direct `Rscript.exe` run surfaced that this number came from **averaging the six genres' own means** (mean of means), not from a **grand mean weighted by song count**. Reggae (159 songs) and Pop (27,700 songs) each contributed one unweighted data point to that average, pulling the "Other Genres" figure upward even though reggae barely affects the actual population of songs.
-
-The grand mean — every song counted once, computed directly in Step 20 — gives **Other Genres = 0.0603, Hip-Hop = 3.86x**, not 4.8x. Both numbers describe something true, but only one answers "how does a typical Billboard song's speechiness compare to a typical Hip-Hop song's" — the question the RQ actually asks. This wasn't a Python bug to fix; it was a statistical-methodology gap in the R original that only surfaced by re-deriving the number from raw rows instead of trusting a reported summary statistic.
-
-### 3. A hardcoded annotation was off by eight years — caught by eye, resolved in three rounds
-
-The RQ2 divergence chart (Step 11) carries an annotation, "Valence & Energy begin to diverge," pointing at a specific year. Both R's original `.qmd` and this notebook's first draft hardcoded that year as **1993** — and it's the same literal `1993` pasted into three separate charts (the main divergence plot plus both historical-context overlays), which is itself a tell: three independently *derived* numbers don't usually come out identical, but three copies of the same typed guess do.
-
-**Round 1** treated "diverge" as a crossover question: find the last year Valence still edges out Energy. The year-by-year gap (`energy - valence`) from `features_yearly` gave a clean answer — 1985 is the last year Valence edges ahead (0.6824 vs 0.6807, a 0.0017 margin), and 1986 onward Energy never loses the lead again through 2019. That moved the annotation to **1986** — seven years earlier than 1993, and defensible on its own terms.
-
-**Round 2**: looking at the corrected chart, the actual request was to anchor the label on the sharp visual spike in the red Valence line, not the crossover. Checking confirmed **1979 is Valence's global maximum across the entire 1960–2019 series (0.708)** — a cleaner reference point than a crossover, since it's a maximum, not an interpretation of when two noisy lines swap order. Moved to **1979**.
-
-**Round 3**: 1979 is a real peak, but it still sits inside Phase 1's (1960–1979) background shading in the chart — visually "the wrong era." The actual ask was a peak that reads as belonging to Phase 2 (1980–1999). Checking Phase 2 in isolation: **1985 is Valence's local maximum within that window (0.6824)**, just behind the global peak. It's also the cleaner divergence story on its own merits — 1979 is followed by a partial rebound (Valence climbs back from a 1981 low of 0.616 to nearly its old high by 1985), whereas 1985 is followed by an uninterrupted 15-year decline all the way to 0.5624 in 1999. Final answer: **1985**.
-
-All three of 1986, 1979, and 1985 are real, data-verified points — none of them was a wrong answer, exactly. Each round's fix was "reasonable" and each one still needed another pass, because "diverge" was underspecified in three different ways: crossover vs. peak vs. *which* peak (global vs. the one that visually belongs to the era being labeled). The lesson isn't just "verify against data" (that part was true from Round 1) — it's that a data-backed answer can still be the wrong answer to what the reader is actually asking, and that only surfaces by checking the *rendered chart* against the *intent* of the annotation, not just re-deriving a number. This is the same underlying issue as the stale "Energy 0.73" label above — a hand-placed visual marker never validated against what it's supposed to show — but caught through human pattern-matching against the image across three iterations, not a single re-run.
-
----
-
-## Decision Flow
-
-```
-04 hands off D1_D2_D3_joined.pkl
-    ↓
-Is this stage "same logic, multiple datasets/joins"?
-    → Yes → CONFIG/engine (01-04's pattern)
-    → No, it's genuinely different analyses per unit → don't force a shared config
-    ↓
-Within a no-CONFIG notebook, does a code block repeat 2+ times verbatim?
-    → Yes → extract a shared function anyway (add_phase_backgrounds)
-    → No → leave it inline, one-off code doesn't need a home
-    ↓
-Every number that traces back to an R-reported figure →
-    re-derive it directly (Rscript.exe or raw-row computation), don't trust the rendered label/summary
-    → Matches → confidence confirmed
-    → Doesn't match → is it a stale label, or a real methodology gap? Diagnose before "fixing"
-```
-
----
-
-## ⚠️ Common Mistakes
-
-| Mistake | Cause | Fix |
-|---|---|---|
-| Forcing CONFIG/engine onto a stage that isn't actually a loop | Treating "01-04 all used this pattern" as a rule instead of a fit for a specific shape | Recognize when the work is genuinely per-question/per-analysis, not the same transform repeated, and skip the abstraction |
-| Leaving real duplication inline because "this notebook doesn't use CONFIG/engine" | Conflating "skip the top-level pattern" with "skip all reuse" | Extract a shared function the moment the *same* code (not just similar-shaped code) appears 2+ times |
-| Trusting a chart's hand-typed label as ground truth because it's in the "authoritative" source file | Assuming anything inside the original R `.qmd` was computed live | Re-derive the number directly; a label is just a string someone typed once and may never have been updated |
-| Accepting a reported summary statistic (e.g., "4.8x") without checking how it was averaged | Mean-of-means and grand-mean look identical in a sentence but answer different questions | When genre/category group sizes are very unequal, always check whether a cross-group comparison is weighted by n or not |
-| Assuming a coverage subset (e.g., D3-matched genre rows) is evenly distributed across the axis being compared | Not checking match-rate uniformity before comparing % breakdowns across decades | Check per-decade coverage % explicitly (RQ1: 14–19%, uneven) and report it as a stated limitation, not a silent assumption |
-| Placing an annotation coordinate (e.g., "trend begins here") at an eyeballed or copy-pasted x-value | The same literal coordinate appearing in multiple charts is itself a tell — it's one typed guess reused, not several independent calculations agreeing | Compute the actual crossover/inflection point from the data (a simple year-by-year diff is enough) and anchor the annotation to that value |
+- RQ1 and RQ3's genre comparisons only cover 14–19% of the dataset: not every song has a genre label, and the coverage isn't even across decades. The trends probably still hold directionally, but I wouldn't treat the exact percentages as precise.
+- Hip-Hop's speechiness numbers likely undercount its influence, since Pop songs with rap elements probably aren't tagged as Hip-Hop in this dataset.
+- The "divergence" annotation on the RQ2 chart is a judgment call about what point best represents the story, not a fully principled calculation. Someone else might reasonably place it differently.
 
 ---
 
