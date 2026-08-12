@@ -40,5 +40,5 @@ interchangeable datasets), and for three issues caught by not trusting R's
 rendered output at face value: a chart label that had gone stale relative to
 R's own text, a mean-of-means statistic that overstated Hip-Hop's speechiness
 ratio (4.8x reported vs. 3.86x on a proper grand mean), and a hardcoded
-"divergence begins here" annotation that was fourteen years off from
-Valence's actual peak in the data.
+"divergence begins here" annotation that took three rounds of checking
+against the rendered chart (not just the data) to land on the right year.

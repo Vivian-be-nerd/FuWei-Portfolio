@@ -15,7 +15,7 @@ flowchart TD
     D --> D1[Steps 7-14: shared add_phase_backgrounds helper]
     D --> D2[Valence vs Energy divergence + sociopolitical/tech overlays]
     D --> D3[Caught R's own chart labels contradicting its text/data]
-    D --> D4[Caught a hardcoded divergence-year annotation, off by 14 years]
+    D --> D4[Caught a hardcoded divergence-year annotation, resolved over 3 rounds]
 
     E --> E1[Steps 15-21: speechiness trend, decade + genre comparison]
     E --> E2[Caught R's mean-of-means bug inflating the Hip-Hop ratio]
@@ -73,23 +73,17 @@ R reported "Other Genres average 0.0646, Hip-Hop is 4.8x higher." Re-verifying a
 
 The grand mean — every song counted once, computed directly in Step 20 — gives **Other Genres = 0.0603, Hip-Hop = 3.86x**, not 4.8x. Both numbers describe something true, but only one answers "how does a typical Billboard song's speechiness compare to a typical Hip-Hop song's" — the question the RQ actually asks. This wasn't a Python bug to fix; it was a statistical-methodology gap in the R original that only surfaced by re-deriving the number from raw rows instead of trusting a reported summary statistic.
 
-### 3. A hardcoded annotation was fourteen years off — caught by eye, resolved in two rounds
+### 3. A hardcoded annotation was off by eight years — caught by eye, resolved in three rounds
 
 The RQ2 divergence chart (Step 11) carries an annotation, "Valence & Energy begin to diverge," pointing at a specific year. Both R's original `.qmd` and this notebook's first draft hardcoded that year as **1993** — and it's the same literal `1993` pasted into three separate charts (the main divergence plot plus both historical-context overlays), which is itself a tell: three independently *derived* numbers don't usually come out identical, but three copies of the same typed guess do.
 
-**Round 1** treated "diverge" as a crossover question: find the last year Valence still edges out Energy. The year-by-year gap (`energy - valence`) from `features_yearly` gave a clean answer:
+**Round 1** treated "diverge" as a crossover question: find the last year Valence still edges out Energy. The year-by-year gap (`energy - valence`) from `features_yearly` gave a clean answer — 1985 is the last year Valence edges ahead (0.6824 vs 0.6807, a 0.0017 margin), and 1986 onward Energy never loses the lead again through 2019. That moved the annotation to **1986** — seven years earlier than 1993, and defensible on its own terms.
 
-| Year | Valence | Energy | Leader |
-|---|---|---|---|
-| 1984 | 0.6618 | 0.6823 | Energy (first, single-year flip) |
-| 1985 | 0.6824 | 0.6807 | Valence (barely — a 0.0017 margin) |
-| 1986 | 0.6578 | 0.6726 | Energy (never loses the lead again through 2019) |
+**Round 2**: looking at the corrected chart, the actual request was to anchor the label on the sharp visual spike in the red Valence line, not the crossover. Checking confirmed **1979 is Valence's global maximum across the entire 1960–2019 series (0.708)** — a cleaner reference point than a crossover, since it's a maximum, not an interpretation of when two noisy lines swap order. Moved to **1979**.
 
-That moved the annotation to 1986 — seven years earlier than 1993, and defensible on its own terms.
+**Round 3**: 1979 is a real peak, but it still sits inside Phase 1's (1960–1979) background shading in the chart — visually "the wrong era." The actual ask was a peak that reads as belonging to Phase 2 (1980–1999). Checking Phase 2 in isolation: **1985 is Valence's local maximum within that window (0.6824)**, just behind the global peak. It's also the cleaner divergence story on its own merits — 1979 is followed by a partial rebound (Valence climbs back from a 1981 low of 0.616 to nearly its old high by 1985), whereas 1985 is followed by an uninterrupted 15-year decline all the way to 0.5624 in 1999. Final answer: **1985**.
 
-**Round 2**: looking at the corrected chart, the actual request was to anchor the label on the sharp visual spike in the red Valence line, a few years earlier still. Checking confirmed **1979 is Valence's global maximum across the entire 1960–2019 series (0.708)** — after this point Valence enters a long-run decline (with one minor rebound around 1985) while Energy keeps climbing. That's fourteen years earlier than the original 1993, and a cleaner reference point than a crossover: it's a maximum, not an interpretation of when two noisy lines happened to swap order.
-
-Both 1986 (permanent crossover) and 1979 (Valence's peak) are real, data-verified points — "diverge" genuinely supports either reading. The one that ships is 1979, because it matches the annotation's actual wording: not "who's ahead," but "where the two long-run trends start pulling apart." All three charts' coordinates now sit on that real peak value, not an eyeballed guess. This is the same category of issue as the stale "Energy 0.73" label above — a hand-placed visual marker never re-validated against the numbers it represents — except this time human pattern-matching against the rendered chart caught it, not a full R re-run, and getting the fix "reasonable" on the first pass (1986) still wasn't the same as getting it right (1979).
+All three of 1986, 1979, and 1985 are real, data-verified points — none of them was a wrong answer, exactly. Each round's fix was "reasonable" and each one still needed another pass, because "diverge" was underspecified in three different ways: crossover vs. peak vs. *which* peak (global vs. the one that visually belongs to the era being labeled). The lesson isn't just "verify against data" (that part was true from Round 1) — it's that a data-backed answer can still be the wrong answer to what the reader is actually asking, and that only surfaces by checking the *rendered chart* against the *intent* of the annotation, not just re-deriving a number. This is the same underlying issue as the stale "Energy 0.73" label above — a hand-placed visual marker never validated against what it's supposed to show — but caught through human pattern-matching against the image across three iterations, not a single re-run.
 
 ---
 
