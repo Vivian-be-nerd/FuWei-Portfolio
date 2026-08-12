@@ -27,7 +27,7 @@ These templates are designed to be reusable across any structured dataset — no
 | [02 Data Pattern Analysis](./02_data_pattern_analysis.md) | Analyze | Text pattern detection, symbol/content classification, cleaning-rule design | ✅ Available |
 | [03 Data Wrangling](./03_data_wrangling.md) | Clean | Execute cleaning rules, column alignment, join-key creation | ✅ Available |
 | [04 Data Joining](./04_data_Joining.md) | Merge | Join strategies, key matching, validation | ✅ Available |
-| 05 EDA | Visualize | Exploratory visualization, trend analysis | 🔜 Coming Soon |
+| [05 EDA](./05_EDA.md) | Visualize | Exploratory visualization, trend analysis, three research questions | ✅ Available |
 | 06 Modeling | Model | Feature selection, model evaluation | 🔜 Coming Soon |
 | 07 Final Report | Report | Storytelling, presentation structure | 🔜 Coming Soon |
 

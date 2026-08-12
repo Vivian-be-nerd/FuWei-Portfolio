@@ -9,7 +9,7 @@ separation so new datasets only require adding a config entry, not new code.
 | 02_data_pattern_analysis_auto.ipynb | Pattern Analysis | ✅ Complete |
 | 03_data_wrangling_auto.ipynb | Data Wrangling | ✅ Complete |
 | 04_data_Joining_auto.ipynb | Data Joining | ✅ Complete |
-| 05_EDA.py | EDA | 🔜 Planned |
+| 05_EDA_auto.ipynb | EDA | ✅ Complete |
 | 06_modeling.py | Modeling | 🔜 Planned |
 | 07_Final_Report.py | Final Report | 🔜 Planned |
 
@@ -32,3 +32,11 @@ for how `04_data_Joining_auto.ipynb` merges an asymmetric pair of joins with one
 shared engine function, and the debugging story behind tracking a 0.04% match-rate
 gap against R down to two real config bugs — using R's actual regex source, not
 just its rendered output — until the primary join matched exactly.
+
+See [`pipeline-guides/05_EDA.md`](../../../pipeline-guides/05_EDA.md) for why
+`05_EDA_auto.ipynb` deliberately does *not* use CONFIG/engine (three research
+questions are three different analyses, not one transform looped over
+interchangeable datasets), and for two issues caught by re-deriving R's numbers
+directly instead of trusting its rendered output: a chart label that had gone
+stale relative to R's own text, and a mean-of-means statistic that overstated
+Hip-Hop's speechiness ratio (4.8x reported vs. 3.86x on a proper grand mean).
