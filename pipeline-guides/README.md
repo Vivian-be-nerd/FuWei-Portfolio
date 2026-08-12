@@ -1,21 +1,19 @@
 # 📋 Data Analysis Pipeline Guides
 
-Python-based reusable templates for each stage of the data analysis pipeline.  
-Built from real project experience — applicable to any structured dataset.
+Notes from converting a six-stage R analysis pipeline into Python, one stage at a time.
 
-> These guides are continuously updated as I complete each stage of analysis.
+> Updated as each stage is completed.
 
 ---
 
 ## What's This?
 
-When I converted my R-based music analysis project into Python, I documented every decision, common mistake, and best practice into reusable guides.
+I built a Billboard Hot 100 analysis in R for a graduate coursework project, then converted the whole pipeline to Python. Each guide covers one stage: what it does, how I approached it, and what's still an open question or a judgment call rather than a settled answer.
 
-These templates are designed to be reusable across any structured dataset — not just music data.
+The design choices (a CONFIG/engine split for the stages that repeat the same logic across datasets, one shared function instead of copy-pasted code, checking every number against the original R output before trusting it) generalize to most structured-data pipelines, not just this one.
 
 > 💡 **See it in action:**  
-> These guides were built from the [Music Hit Analysis: A Six-Decade Study](../data-analysis-projects/music-analysis/proposal.md)  
-> — analyzing 60+ years of Billboard Hot 100 with Spotify audio features.
+> These guides were built from the [Music Hit Analysis: A Six-Decade Study](../data-analysis-projects/music-analysis/proposal.md), analyzing 60+ years of Billboard Hot 100 with Spotify audio features.
 
 ---
 
@@ -23,7 +21,7 @@ These templates are designed to be reusable across any structured dataset — no
 
 | Guide | Stage | Description | Status |
 |-------|-------|-------------|--------|
-| [01 Data Exploration](./01_data_exploration.md) | Explore | Data quality check, validation rules, decision flow | ✅ Available |
+| [01 Data Exploration](./01_data_exploration.md) | Explore | Data quality checks, CONFIG-per-dataset pattern, IQR outlier detection | ✅ Available |
 | [02 Data Pattern Analysis](./02_data_pattern_analysis.md) | Analyze | Text pattern detection, symbol/content classification, cleaning-rule design | ✅ Available |
 | [03 Data Wrangling](./03_data_wrangling.md) | Clean | Execute cleaning rules, column alignment, join-key creation | ✅ Available |
 | [04 Data Joining](./04_data_Joining.md) | Merge | Join strategies, key matching, validation | ✅ Available |
@@ -35,11 +33,11 @@ These templates are designed to be reusable across any structured dataset — no
 
 ## How to Use
 
-Each guide includes:
-- **Decision Rules** — when to use which method
-- **Code Templates** — ready-to-use Python code
-- **Common Mistakes** — what to avoid
-- **Decision Flow** — step-by-step thinking process
+Each guide follows the same structure:
+- **What This Stage Did** — the goal and scope
+- **What I Found** — only in stages that produce an actual analytical result (05 onward). 01–04 are data-engineering stages with nothing to report here.
+- **How I Did It** — the approach, and anything real I caught along the way
+- **Open Questions** — limitations and judgment calls I'd revisit
 
 ---
 
