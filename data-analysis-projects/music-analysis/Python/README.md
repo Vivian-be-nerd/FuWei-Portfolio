@@ -36,7 +36,9 @@ just its rendered output — until the primary join matched exactly.
 See [`pipeline-guides/05_EDA.md`](../../../pipeline-guides/05_EDA.md) for why
 `05_EDA_auto.ipynb` deliberately does *not* use CONFIG/engine (three research
 questions are three different analyses, not one transform looped over
-interchangeable datasets), and for two issues caught by re-deriving R's numbers
-directly instead of trusting its rendered output: a chart label that had gone
-stale relative to R's own text, and a mean-of-means statistic that overstated
-Hip-Hop's speechiness ratio (4.8x reported vs. 3.86x on a proper grand mean).
+interchangeable datasets), and for three issues caught by not trusting R's
+rendered output at face value: a chart label that had gone stale relative to
+R's own text, a mean-of-means statistic that overstated Hip-Hop's speechiness
+ratio (4.8x reported vs. 3.86x on a proper grand mean), and a hardcoded
+"divergence begins here" annotation that was seven years off from the actual
+crossover in the data.

@@ -15,6 +15,7 @@ flowchart TD
     D --> D1[Steps 7-14: shared add_phase_backgrounds helper]
     D --> D2[Valence vs Energy divergence + sociopolitical/tech overlays]
     D --> D3[Caught R's own chart labels contradicting its text/data]
+    D --> D4[Caught a hardcoded divergence-year annotation, off by 7 years]
 
     E --> E1[Steps 15-21: speechiness trend, decade + genre comparison]
     E --> E2[Caught R's mean-of-means bug inflating the Hip-Hop ratio]
@@ -58,7 +59,7 @@ The lesson from 04 generalizes further than "CONFIG/engine is about where a deci
 
 ---
 
-## Two Validation Wins Worth Calling Out
+## Three Validation Wins Worth Calling Out
 
 ### 1. R's own chart labels didn't match its own numbers
 
@@ -71,6 +72,20 @@ Python's `analysis_base` reproduced R's row count exactly (262,737) and its real
 R reported "Other Genres average 0.0646, Hip-Hop is 4.8x higher." Re-verifying against a direct `Rscript.exe` run surfaced that this number came from **averaging the six genres' own means** (mean of means), not from a **grand mean weighted by song count**. Reggae (159 songs) and Pop (27,700 songs) each contributed one unweighted data point to that average, pulling the "Other Genres" figure upward even though reggae barely affects the actual population of songs.
 
 The grand mean — every song counted once, computed directly in Step 20 — gives **Other Genres = 0.0603, Hip-Hop = 3.86x**, not 4.8x. Both numbers describe something true, but only one answers "how does a typical Billboard song's speechiness compare to a typical Hip-Hop song's" — the question the RQ actually asks. This wasn't a Python bug to fix; it was a statistical-methodology gap in the R original that only surfaced by re-deriving the number from raw rows instead of trusting a reported summary statistic.
+
+### 3. A hardcoded annotation was seven years off — caught by eye, confirmed by data
+
+The RQ2 divergence chart (Step 11) carries an annotation, "Valence & Energy begin to diverge," pointing at a specific year. Both R's original `.qmd` and this notebook's first draft hardcoded that year as **1993** — and it's the same literal `1993` pasted into three separate charts (the main divergence plot plus both historical-context overlays), which is itself a tell: three independently *derived* numbers don't usually come out identical, but three copies of the same typed guess do.
+
+Looking at the rendered chart directly (not re-running R this time — just reading the plot) surfaced that the crossover visibly happens earlier than where the label sits. Computing the year-by-year gap (`energy - valence`) from `features_yearly` confirmed it precisely:
+
+| Year | Valence | Energy | Leader |
+|---|---|---|---|
+| 1984 | 0.6618 | 0.6823 | Energy (first, single-year flip) |
+| 1985 | 0.6824 | 0.6807 | Valence (barely — a 0.0017 margin) |
+| **1986** | 0.6578 | 0.6726 | **Energy (never loses the lead again through 2019)** |
+
+The real crossover is **1986**, seven years earlier than the hardcoded 1993. All three charts' annotation coordinates were recomputed from the actual 1986 values (`xy`/`xytext` now sit on the real data points, not an eyeballed guess) rather than just nudging the old x-value. This is the same category of issue as the stale "Energy 0.73" label above — a hand-placed visual marker that was never re-validated against the numbers it's supposed to represent — except this time it was human pattern-matching against the chart itself, not a full R re-run, that caught it.
 
 ---
 
@@ -104,6 +119,7 @@ Every number that traces back to an R-reported figure →
 | Trusting a chart's hand-typed label as ground truth because it's in the "authoritative" source file | Assuming anything inside the original R `.qmd` was computed live | Re-derive the number directly; a label is just a string someone typed once and may never have been updated |
 | Accepting a reported summary statistic (e.g., "4.8x") without checking how it was averaged | Mean-of-means and grand-mean look identical in a sentence but answer different questions | When genre/category group sizes are very unequal, always check whether a cross-group comparison is weighted by n or not |
 | Assuming a coverage subset (e.g., D3-matched genre rows) is evenly distributed across the axis being compared | Not checking match-rate uniformity before comparing % breakdowns across decades | Check per-decade coverage % explicitly (RQ1: 14–19%, uneven) and report it as a stated limitation, not a silent assumption |
+| Placing an annotation coordinate (e.g., "trend begins here") at an eyeballed or copy-pasted x-value | The same literal coordinate appearing in multiple charts is itself a tell — it's one typed guess reused, not several independent calculations agreeing | Compute the actual crossover/inflection point from the data (a simple year-by-year diff is enough) and anchor the annotation to that value |
 
 ---
 
