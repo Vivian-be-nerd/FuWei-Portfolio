@@ -10,7 +10,7 @@ separation so new datasets only require adding a config entry, not new code.
 | 03_data_wrangling_auto.ipynb | Data Wrangling | One generic cleaning engine driven entirely by config, not per-column code | ✅ Complete |
 | 04_data_Joining_auto.ipynb | Data Joining | Reusable multi-source join logic with built-in match-rate validation | ✅ Complete |
 | 05_EDA_auto.ipynb | EDA | A hypothesis → verify → correct analytical discipline, not tied to this dataset | ✅ Complete |
-| 06_modeling_auto.ipynb | Modeling | Reusable binary-classification explanatory workflow (LR + RF, feature-importance comparison) — swap the config to test any Hit/Flop-style problem | ✅ Complete |
+| 06_modeling_auto.ipynb ([preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/06_modeling_auto.html)) | Modeling | Reusable binary-classification explanatory workflow (LR + RF, feature-importance comparison) — swap the config to test any Hit/Flop-style problem | ✅ Complete |
 | 07_Final_Report.py | Final Report | Structuring technical findings into a decision-ready narrative for a non-technical audience | 🔜 Planned |
 
 See [`pipeline-guides/01_data_exploration.md`](../../../pipeline-guides/01_data_exploration.md)
