@@ -1,7 +1,66 @@
+# %% [markdown]
+# ---
+# title: "01 Data Exploration"
+# author: "Fu Wei Hsu"
+# format:
+#   html:
+#     theme: cosmo
+#     toc: true
+#     toc-location: right
+#     toc-title: "On this page"
+#     embed-resources: true
+# ---
+
+# %% [markdown]
+# # 01 — Data Exploration
+#
+# **Research question:** before any cleaning or joining happens, is this dataset
+# actually usable — right size, right date range, no silent gaps? This stage is
+# a health check, not an analysis: it answers "can I trust this data enough to
+# build on top of it," and hands off a list of known issues to the next stage.
+#
+# **This is a runnable CLI script, not a notebook.** Point it at any CSV (or a
+# Kaggle dataset) and it prints the same 8-step report — no code changes needed
+# to explore a new dataset, only a new CONFIG entry.
+
+# %% [markdown]
+# ## Architecture
+#
+# One generic health-check engine (`run_exploration()`), reused across as many
+# datasets as you register in `DATASETS` — that's the whole point of CONFIG/engine
+# separation: adding a fourth dataset later means adding one dict entry, not writing
+# a fourth copy of this logic.
+#
+# | | |
+# |---|---|
+# | **CONFIG** | `DATASETS` dict — one entry per dataset: how to load it, its column definitions, expected ranges, and where to save the validated result |
+# | **Engine** | `load_data()` (CSV or Kaggle) + `run_exploration()` (the 8-step report) — both generic, neither one knows anything about Billboard or Spotify specifically |
+# | **Entry point** | 3 CLI modes: `--dataset d1/d2/d3/all` (built-in configs), `--csv <path>` (any new CSV, ad hoc), or no args (falls back to the CONFIG block below) |
+
+# %% [markdown]
+# ## Step Blueprint
+#
+# Every step below is machine-concluded ([OK]/[WARN]) — unlike later stages,
+# 01 never needs human judgment, because "is this row a duplicate" and "is this
+# rank inside 1-100" are objective checks, not interpretation calls.
+#
+# | Step | What It Checks | Question Answered |
+# |------|------|------|
+# | **Step 1** | Dataset Size | How many rows/columns, and what are they? |
+# | **Step 2** | Date Range | What time period does this data actually cover? |
+# | **Step 3** | Duplicate Row Check | Are there exact duplicate rows? |
+# | **Step 4** | NaN / Zero / Blank Health Check | Which columns have missing, zero, or blank values? |
+# | **Step 5** | Advanced NaN Analysis | Do the missing values follow an expected pattern (e.g. chart debut vs. re-entry), or are they unexplained? |
+# | **Step 6** | Column Value Range Validation | Does every value fall inside its expected range (e.g. chart rank 1-100)? |
+# | **Step 6b** | IQR Outlier Detection | Are there statistical outliers? Reported as `[INFO]` only — an outlier isn't necessarily an error (a song with an unusually long chart run is real data), so this always needs a human to look, never auto-cleaned. |
+# | **Step 7** | Summary | Roll everything above into one health report — what needs fixing in the next stage? |
+# | **Step 8** | Save Validated Data | Persist the validated dataframe to `.pkl` so the next stage can load it directly. |
+
+# %%
 """
 01_data_exploration_auto.py
 ============================
-Automated Data Exploration Script — mirrors the structure of 01_data_exploration.ipynb
+Automated Data Exploration Script -- mirrors the structure of 01_data_exploration.ipynb
 
 Two data source modes:
   Mode 1 (SOURCE = "csv")    -> Load from a local CSV file path
@@ -16,12 +75,22 @@ Author: Fu Wei Hsu
 """
 
 import sys
-sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding='utf-8')
 
 import pandas as pd
 import os
 import argparse
 
+# %% [markdown]
+# ## CONFIG — Only edit this section when switching datasets
+#
+# Everything that changes when you point this script at a *new* dataset lives
+# here: where the data comes from, what each column means, and what "valid"
+# looks like for it. None of this logic reaches into the engine below —
+# `run_exploration()` never hardcodes a column name.
+
+# %%
 # ============================================================
 # CONFIG -- Only edit this section when switching datasets
 # ============================================================
@@ -59,6 +128,15 @@ ADVANCED_NAN_CHECK = {
     "debut_val": 1,
 }
 
+# %% [markdown]
+# ## Engine — No edits needed below this line
+#
+# `load_data()` and `run_exploration()` are generic: they take a dataframe plus
+# a CONFIG dict and produce the 8-step report. Neither function contains a
+# dataset-specific `if` branch — that's the test for whether CONFIG/engine
+# separation is actually holding, not just claimed.
+
+# %%
 # ============================================================
 # No edits needed below this line
 # ============================================================
@@ -278,8 +356,15 @@ def run_exploration(df, dataset_name, date_col, col_defs, advanced_nan, chart_si
     print(f"\n{sep}\n")
     return df
 
+# %% [markdown]
+# ## Built-in Dataset Configs
+#
+# This is the same CONFIG idea as above, just registered for all three project
+# datasets at once. Adding a fourth dataset later means adding one more key here
+# — `load`, `col_defs`, and everything else follow the same shape.
 
-# ── Built-in dataset configs ──────────────────────────────────
+# %%
+# -- Built-in dataset configs --------------------------------------
 DATASETS = {
     "d1": {
         "name": "D1 Billboard Hot 100",
@@ -355,18 +440,39 @@ DATASETS = {
     },
 }
 
+# %% [markdown]
+# ## Entry Point — CLI Usage
+#
+# Three modes, in priority order:
+#
+# 1. **`--dataset d1 / d2 / d3 / all`** — run one or all of the built-in configs above
+# 2. **`--csv <path>`** — point at any new CSV ad hoc, using the CONFIG block's defaults
+# 3. **No arguments** — fall back entirely to the CONFIG block's `SOURCE` / `CSV_PATH` settings, including Kaggle auto-download if `SOURCE = "kaggle"`
+#
+# ```
+# python 01_data_exploration_auto.py --dataset all
+# python 01_data_exploration_auto.py --dataset d1
+# python 01_data_exploration_auto.py --csv path/to/new_data.csv --name "My Dataset"
+# ```
 
-# ── Entry point ───────────────────────────────────────────────
+# %%
+# -- Entry point -----------------------------------------------
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Automated Data Exploration Script")
-    parser.add_argument("--dataset",  type=str, default=None,
-                        help="Choose dataset: d1 / d2 / d3 / all (uses --csv mode if omitted)")
-    parser.add_argument("--csv",      type=str, default=None, help="Custom CSV file path")
-    parser.add_argument("--name",     type=str, default=None, help="Custom dataset name")
-    parser.add_argument("--data-dir", type=str, default=r"..\Data",
-                        help="Path to Data folder (default: ..\\Data)")
-    args = parser.parse_args()
+    if "ipykernel" in sys.modules:
+        # Running inside a notebook/Quarto render, not a real terminal -- sys.argv
+        # holds the kernel's own launcher flags, not ours. Demo all 3 built-in
+        # datasets instead of parsing them as CLI args.
+        args = argparse.Namespace(dataset="all", csv=None, name=None, data_dir=r"..\Data")
+    else:
+        parser = argparse.ArgumentParser(description="Automated Data Exploration Script")
+        parser.add_argument("--dataset",  type=str, default=None,
+                            help="Choose dataset: d1 / d2 / d3 / all (uses --csv mode if omitted)")
+        parser.add_argument("--csv",      type=str, default=None, help="Custom CSV file path")
+        parser.add_argument("--name",     type=str, default=None, help="Custom dataset name")
+        parser.add_argument("--data-dir", type=str, default=r"..\Data",
+                            help="Path to Data folder (default: ..\\Data)")
+        args = parser.parse_args()
 
     # -- Mode 1: built-in dataset(s) via --dataset --
     if args.dataset:
