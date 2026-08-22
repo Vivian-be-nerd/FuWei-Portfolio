@@ -3,15 +3,15 @@
 Converting the R pipeline to Python, stage by stage. Built with a CONFIG/engine
 separation so new datasets only require adding a config entry, not new code.
 
-| File | Stage | Status |
-|------|-------|--------|
-| 01_data_exploration_auto.py | Data Exploration | ✅ Complete |
-| 02_data_pattern_analysis_auto.ipynb | Pattern Analysis | ✅ Complete |
-| 03_data_wrangling_auto.ipynb | Data Wrangling | ✅ Complete |
-| 04_data_Joining_auto.ipynb | Data Joining | ✅ Complete |
-| 05_EDA_auto.ipynb | EDA | ✅ Complete |
-| 06_modeling.py | Modeling | 🔜 Planned |
-| 07_Final_Report.py | Final Report | 🔜 Planned |
+| File | Stage | What It Demonstrates | Status |
+|------|-------|-----------------------|--------|
+| 01_data_exploration_auto.py | Data Exploration | Reusable data-quality workflow — swap the config, not the code, to point it at a new dataset | ✅ Complete |
+| 02_data_pattern_analysis_auto.ipynb | Pattern Analysis | Reusable text-pattern detection and cleaning-rule design, independent of domain | ✅ Complete |
+| 03_data_wrangling_auto.ipynb | Data Wrangling | One generic cleaning engine driven entirely by config, not per-column code | ✅ Complete |
+| 04_data_Joining_auto.ipynb | Data Joining | Reusable multi-source join logic with built-in match-rate validation | ✅ Complete |
+| 05_EDA_auto.ipynb | EDA | A hypothesis → verify → correct analytical discipline, not tied to this dataset | ✅ Complete |
+| 06_modeling_auto.ipynb | Modeling | Reusable binary-classification explanatory workflow (LR + RF, feature-importance comparison) — swap the config to test any Hit/Flop-style problem | ✅ Complete |
+| 07_Final_Report.py | Final Report | Structuring technical findings into a decision-ready narrative for a non-technical audience | 🔜 Planned |
 
 See [`pipeline-guides/01_data_exploration.md`](../../../pipeline-guides/01_data_exploration.md)
 for the design principles behind this script (CONFIG/engine separation, and why
