@@ -2311,7 +2311,7 @@ vertical-align: -.125em;
 </tr>
 </tbody>
 </table>
-<p><strong>A reproducibility note up front:</strong> train/test splitting uses the same random seed (42) as the original R version, but different languages’ RNG implementations don’t produce identical splits from the same seed — exact metric values won’t match R’s reported numbers digit-for-digit. The right validation standard is <em>magnitude and direction</em> (RF beats LR, AUC lands in the same 0.78-0.89 range, similar feature rankings), not an exact match.</p>
+<p><strong>A reproducibility note up front:</strong> train/test splitting uses a fixed random seed (42) so results are reproducible on re-run. The right validation standard for any metric here is <em>magnitude and direction</em> (RF beats LR, AUC lands in a reasonable 0.78-0.89 range, feature rankings make sense) rather than expecting bit-identical numbers on every environment.</p>
 </section>
 <section id="step-blueprint" class="level2">
 <h2 class="anchored" data-anchor-id="step-blueprint">Step Blueprint</h2>
@@ -2448,10 +2448,10 @@ vertical-align: -.125em;
 </tbody>
 </table>
 <blockquote class="blockquote">
-<p><strong>Scope note:</strong> matches the original R version’s two-model design (LR + RF) and hyperparameters (500 RF trees, 80/20 split, seed 42). One methodology adjustment: RF importance uses test-set permutation importance rather than R’s OOB-sample permutation importance, since scikit-learn has no direct equivalent to the latter — same concept (shuffle a feature, measure the accuracy drop), different sampling source (see Step 8).</p>
-<p><strong>Step 15</strong> is an extension beyond the original R design, added after Step 14 to test whether Pseudo R² (0.232 — these 10 features explain roughly 23% of what separates a Hit from a Flop) could be pushed further without new data collection.</p>
+<p><strong>Design note:</strong> two-model comparison (LR + RF), 500 RF trees, 80/20 split, seed 42. RF importance uses test-set permutation importance (shuffle a feature, measure the accuracy drop on held-out data) — see Step 8.</p>
+<p><strong>Step 15</strong> is an extension beyond the core 14-step comparison, added to test whether Pseudo R² (0.232 — these 10 features explain roughly 23% of what separates a Hit from a Flop) could be pushed further without new data collection.</p>
 </blockquote>
-<div id="f54d91b5" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T21:59:42.255664Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T21:59:42.255435Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T21:59:44.906309Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T21:59:44.905426Z&quot;}}" data-execution_count="1">
+<div id="f54d91b5" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:34:55.265504Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:34:55.265323Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:34:57.433164Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:34:57.432574Z&quot;}}" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
@@ -2481,9 +2481,9 @@ vertical-align: -.125em;
 <section id="step-1-build-modeling-dataset" class="level2">
 <h2 class="anchored" data-anchor-id="step-1-build-modeling-dataset">Step 1 — Build Modeling Dataset</h2>
 <p>Selects the target column plus the 10 audio features from <code>wrangled_D2.pkl</code> and drops any row with a missing value. D2 was already balanced 50/50 (Hit/Flop) during cleaning, so no resampling is needed here — worth confirming directly, since this assumption is unusual for a classification problem.</p>
-<div id="2b307cee" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T21:59:44.909812Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T21:59:44.909274Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T21:59:44.942341Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T21:59:44.941970Z&quot;}}" data-execution_count="2">
+<div id="2b307cee" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:34:57.435430Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:34:57.435180Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:34:57.467108Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:34:57.466703Z&quot;}}" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Select target + feature columns, drop rows with any missing values,</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># print a composition health report (mirrors R&#39;s Build Modeling Dataset block).</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># print a composition health report.</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> build_modeling_dataset(df, target_col, feature_cols):</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    model_df <span class="op">=</span> df[[target_col] <span class="op">+</span> feature_cols].dropna().copy()</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    model_df[target_col] <span class="op">=</span> model_df[target_col].astype(<span class="bu">int</span>)</span>
@@ -2513,7 +2513,7 @@ Hit Percentage:   50.0%</code></pre>
 <h2 class="anchored" data-anchor-id="step-1b-feature-correlation-matrix">Step 1b — Feature Correlation Matrix</h2>
 <p>Before splitting or modeling, check pairwise Pearson correlation across the 10 audio features — a standard pre-modeling check for regression-family models, since highly correlated features can destabilize coefficient estimates (multicollinearity).</p>
 <p>Rule of thumb: |r| &lt; 0.7 is generally fine; 0.7-0.9 is a strong correlation worth flagging when interpreting coefficients; &gt; 0.9 is close to duplicate information and a candidate for removal.</p>
-<div id="2dc01a6a" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T21:59:44.944054Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T21:59:44.943924Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T21:59:44.961126Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T21:59:44.960724Z&quot;}}" data-execution_count="3">
+<div id="2dc01a6a" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:34:57.468673Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:34:57.468533Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:34:57.485907Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:34:57.485488Z&quot;}}" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 1b] Feature Correlation Matrix (10x10)&quot;</span>)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>corr_matrix <span class="op">=</span> model_df[CONFIG[<span class="st">&quot;feature_cols&quot;</span>]].corr()</span>
@@ -2549,7 +2549,7 @@ Pairs with |r| &gt; 0.7 (flagged for coefficient interpretation caution):
   energy &lt;-&gt; acousticness: r = -0.715</code></pre>
 </div>
 </div>
-<div id="6401e87f" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T21:59:44.962989Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T21:59:44.962786Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T21:59:45.418176Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T21:59:45.417345Z&quot;}}" data-execution_count="4">
+<div id="6401e87f" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:34:57.488829Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:34:57.488576Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:34:57.982399Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:34:57.981868Z&quot;}}" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 1b] Feature Correlation Heatmap&quot;</span>)</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="dv">7</span>))</span>
@@ -2587,7 +2587,7 @@ Pairs with |r| &gt; 0.7 (flagged for coefficient interpretation caution):
 <section id="step-2-train-test-split" class="level2">
 <h2 class="anchored" data-anchor-id="step-2-train-test-split">Step 2 — Train / Test Split</h2>
 <p>80/20 stratified split (<code>stratify=target</code>) so the Hit ratio stays balanced in both halves rather than drifting from a plain random split.</p>
-<div id="fe995f0a" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T21:59:45.420729Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T21:59:45.420482Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T21:59:45.441884Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T21:59:45.441264Z&quot;}}" data-execution_count="5">
+<div id="fe995f0a" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:34:57.984252Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:34:57.984089Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:34:58.004676Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:34:58.003912Z&quot;}}" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 2] Train / Test Split (80/20, stratified)&quot;</span>)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> model_df[CONFIG[<span class="st">&quot;feature_cols&quot;</span>]]</span>
@@ -2618,8 +2618,8 @@ Test set  Hit ratio: 50.0%</code></pre>
 <h2 class="anchored" data-anchor-id="part-1-logistic-regression">Part 1: Logistic Regression</h2>
 <section id="step-3-model-construction" class="level3">
 <h3 class="anchored" data-anchor-id="step-3-model-construction">Step 3 — Model Construction</h3>
-<p>Uses <code>statsmodels.Logit</code>, not scikit-learn’s <code>LogisticRegression</code> — R’s <code>glm(family=binomial)</code> returns coefficient standard errors, z-values, and p-values, and <code>statsmodels</code> is the Python library that exposes the same statistical-inference output; scikit-learn’s classifier does not.</p>
-<div id="58deaf83" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T21:59:45.443584Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T21:59:45.443441Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T21:59:45.500711Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T21:59:45.500141Z&quot;}}" data-execution_count="6">
+<p>Uses <code>statsmodels.Logit</code>, not scikit-learn’s <code>LogisticRegression</code> — <code>statsmodels</code> is the Python library that exposes full statistical-inference output (coefficient standard errors, z-values, p-values); scikit-learn’s classifier only returns point-estimate coefficients, not their statistical significance.</p>
+<div id="58deaf83" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:34:58.007334Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:34:58.007108Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:34:58.062176Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:34:58.061525Z&quot;}}" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 3] Logistic Regression -- Model Construction&quot;</span>)</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>X_train_const <span class="op">=</span> sm.add_constant(X_train, has_constant<span class="op">=</span><span class="st">&quot;add&quot;</span>)</span>
@@ -2631,7 +2631,7 @@ Test set  Hit ratio: 50.0%</code></pre>
 <pre><code>[STEP 3] Logistic Regression -- Model Construction
              Model:            Logit           Method:        MLE
 Dependent Variable:           target Pseudo R-squared:      0.232
-              Date: 2026-08-22 17:59              AIC: 35012.6295
+              Date: 2026-08-22 19:34              AIC: 35012.6295
   No. Observations:            32884              BIC: 35105.0377
           Df Model:               10   Log-Likelihood:    -17495.
       Df Residuals:            32873          LL-Null:    -22793.
@@ -2642,8 +2642,8 @@ Dependent Variable:           target Pseudo R-squared:      0.232
 </section>
 <section id="step-4-coefficient-table-sorted-by-p-value" class="level3">
 <h3 class="anchored" data-anchor-id="step-4-coefficient-table-sorted-by-p-value">Step 4 — Coefficient Table (sorted by p-value)</h3>
-<p>Mirrors R’s <code>tidy(logistic_model)</code> output: coefficient, standard error, z-statistic, and p-value per feature, plus two readability columns for significance and direction.</p>
-<div id="f9882b72" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T21:59:45.502751Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T21:59:45.502590Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T21:59:45.511714Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T21:59:45.511143Z&quot;}}" data-execution_count="7">
+<p>One row per feature: coefficient, standard error, z-statistic, and p-value, plus two readability columns for significance and direction.</p>
+<div id="f9882b72" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:34:58.064781Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:34:58.064409Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:34:58.074142Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:34:58.073606Z&quot;}}" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 4] Coefficient Table&quot;</span>)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>coef_df <span class="op">=</span> pd.DataFrame({</span>
@@ -2677,8 +2677,8 @@ instrumentalness   -3.3970     0.0751   -45.2425   0.0000         Yes ↓ Negati
 </section>
 <section id="step-5-feature-importance-visualization" class="level3">
 <h3 class="anchored" data-anchor-id="step-5-feature-importance-visualization">Step 5 — Feature Importance Visualization</h3>
-<p>Green = positive association, red = negative, transparent = not significant (p ≥ 0.05); error bars show the standard error. The intercept (<code>const</code>) is excluded, matching R’s chart.</p>
-<div id="b9840025" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T21:59:45.513770Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T21:59:45.513593Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T21:59:45.687046Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T21:59:45.686688Z&quot;}}" data-execution_count="8">
+<p>Green = positive association, red = negative, transparent = not significant (p ≥ 0.05); error bars show the standard error. The intercept (<code>const</code>) is excluded.</p>
+<div id="b9840025" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:34:58.076416Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:34:58.076159Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:34:58.300624Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:34:58.300209Z&quot;}}" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 5] Logistic Regression -- Coefficient Plot&quot;</span>)</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>plot_df <span class="op">=</span> coef_df[coef_df[<span class="st">&quot;term&quot;</span>] <span class="op">!=</span> <span class="st">&quot;const&quot;</span>].copy()</span>
@@ -2728,54 +2728,53 @@ instrumentalness   -3.3970     0.0751   -45.2425   0.0000         Yes ↓ Negati
 <section id="step-6-model-evaluation" class="level3">
 <h3 class="anchored" data-anchor-id="step-6-model-evaluation">Step 6 — Model Evaluation</h3>
 <p>Evaluated on the held-out 20% test set: confusion matrix, accuracy, sensitivity (Hit recall), specificity (Flop recall), AUC. <strong>This exact sequence is reused for Random Forest</strong> via a shared <code>evaluate_classifier()</code> function rather than being duplicated.</p>
-<div id="042c64ef" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T21:59:45.688550Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T21:59:45.688412Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T21:59:45.840319Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T21:59:45.839685Z&quot;}}" data-execution_count="9">
+<div id="042c64ef" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:34:58.302328Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:34:58.302151Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:34:58.490177Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:34:58.489630Z&quot;}}" data-execution_count="9">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Shared evaluation block for both LR and RF: confusion matrix, accuracy,</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="co"># sensitivity/specificity, AUC + ROC curve data. Mirrors R&#39;s</span></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co"># confusionMatrix()+roc()+auc() combo -- extracted once since both models</span></span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co"># are evaluated with the exact same steps, not just similarly-shaped ones.</span></span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> evaluate_classifier(model_name, y_true, y_pred, y_prob):</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    cm <span class="op">=</span> confusion_matrix(y_true, y_pred, labels<span class="op">=</span>[<span class="dv">0</span>, <span class="dv">1</span>])</span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    tn, fp, fn, tp <span class="op">=</span> cm.ravel()</span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    accuracy <span class="op">=</span> accuracy_score(y_true, y_pred)</span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    sensitivity <span class="op">=</span> recall_score(y_true, y_pred, pos_label<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    specificity <span class="op">=</span> recall_score(y_true, y_pred, pos_label<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    auc_val <span class="op">=</span> roc_auc_score(y_true, y_prob)</span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    fpr, tpr, _ <span class="op">=</span> roc_curve(y_true, y_prob)</span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="ch">\n</span><span class="sc">{</span><span class="st">&#39;=&#39;</span> <span class="op">*</span> <span class="dv">40</span><span class="sc">}</span><span class="ss">&quot;</span>)</span>
-<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="sc">{</span>model_name<span class="sc">}</span><span class="ss"> Evaluation&quot;</span>)</span>
-<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="sc">{</span><span class="st">&#39;=&#39;</span> <span class="op">*</span> <span class="dv">40</span><span class="sc">}</span><span class="ch">\n</span><span class="ss">&quot;</span>)</span>
-<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Confusion Matrix:&quot;</span>)</span>
-<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="sc">{</span><span class="st">&#39;&#39;</span><span class="sc">:&lt;12}</span><span class="ss">Actual 0   Actual 1&quot;</span>)</span>
-<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="sc">{</span><span class="st">&#39;Pred 0&#39;</span><span class="sc">:&lt;12}{</span>tn<span class="sc">:&gt;8}</span><span class="ss">   </span><span class="sc">{</span>fn<span class="sc">:&gt;8}</span><span class="ss">&quot;</span>)</span>
-<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="sc">{</span><span class="st">&#39;Pred 1&#39;</span><span class="sc">:&lt;12}{</span>fp<span class="sc">:&gt;8}</span><span class="ss">   </span><span class="sc">{</span>tp<span class="sc">:&gt;8}</span><span class="ch">\n</span><span class="ss">&quot;</span>)</span>
-<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Accuracy:    </span><span class="sc">{</span>accuracy<span class="sc">:.4f}</span><span class="ss">&quot;</span>)</span>
-<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Sensitivity: </span><span class="sc">{</span>sensitivity<span class="sc">:.4f}</span><span class="ss">  (Hit recall)&quot;</span>)</span>
-<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Specificity: </span><span class="sc">{</span>specificity<span class="sc">:.4f}</span><span class="ss">  (Flop recall)&quot;</span>)</span>
-<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;AUC:         </span><span class="sc">{</span>auc_val<span class="sc">:.4f}</span><span class="ss">&quot;</span>)</span>
-<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {<span class="st">&quot;model&quot;</span>: model_name, <span class="st">&quot;accuracy&quot;</span>: accuracy, <span class="st">&quot;sensitivity&quot;</span>: sensitivity,</span>
-<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;specificity&quot;</span>: specificity, <span class="st">&quot;auc&quot;</span>: auc_val, <span class="st">&quot;fpr&quot;</span>: fpr, <span class="st">&quot;tpr&quot;</span>: tpr}</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="co"># sensitivity/specificity, AUC + ROC curve data -- extracted once since both</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co"># models are evaluated with the exact same steps, not just similarly-shaped ones.</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> evaluate_classifier(model_name, y_true, y_pred, y_prob):</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    cm <span class="op">=</span> confusion_matrix(y_true, y_pred, labels<span class="op">=</span>[<span class="dv">0</span>, <span class="dv">1</span>])</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    tn, fp, fn, tp <span class="op">=</span> cm.ravel()</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    accuracy <span class="op">=</span> accuracy_score(y_true, y_pred)</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    sensitivity <span class="op">=</span> recall_score(y_true, y_pred, pos_label<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    specificity <span class="op">=</span> recall_score(y_true, y_pred, pos_label<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    auc_val <span class="op">=</span> roc_auc_score(y_true, y_prob)</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    fpr, tpr, _ <span class="op">=</span> roc_curve(y_true, y_prob)</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="ch">\n</span><span class="sc">{</span><span class="st">&#39;=&#39;</span> <span class="op">*</span> <span class="dv">40</span><span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="sc">{</span>model_name<span class="sc">}</span><span class="ss"> Evaluation&quot;</span>)</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="sc">{</span><span class="st">&#39;=&#39;</span> <span class="op">*</span> <span class="dv">40</span><span class="sc">}</span><span class="ch">\n</span><span class="ss">&quot;</span>)</span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">&quot;Confusion Matrix:&quot;</span>)</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="sc">{</span><span class="st">&#39;&#39;</span><span class="sc">:&lt;12}</span><span class="ss">Actual 0   Actual 1&quot;</span>)</span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="sc">{</span><span class="st">&#39;Pred 0&#39;</span><span class="sc">:&lt;12}{</span>tn<span class="sc">:&gt;8}</span><span class="ss">   </span><span class="sc">{</span>fn<span class="sc">:&gt;8}</span><span class="ss">&quot;</span>)</span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;</span><span class="sc">{</span><span class="st">&#39;Pred 1&#39;</span><span class="sc">:&lt;12}{</span>fp<span class="sc">:&gt;8}</span><span class="ss">   </span><span class="sc">{</span>tp<span class="sc">:&gt;8}</span><span class="ch">\n</span><span class="ss">&quot;</span>)</span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Accuracy:    </span><span class="sc">{</span>accuracy<span class="sc">:.4f}</span><span class="ss">&quot;</span>)</span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Sensitivity: </span><span class="sc">{</span>sensitivity<span class="sc">:.4f}</span><span class="ss">  (Hit recall)&quot;</span>)</span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;Specificity: </span><span class="sc">{</span>specificity<span class="sc">:.4f}</span><span class="ss">  (Flop recall)&quot;</span>)</span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&quot;AUC:         </span><span class="sc">{</span>auc_val<span class="sc">:.4f}</span><span class="ss">&quot;</span>)</span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {<span class="st">&quot;model&quot;</span>: model_name, <span class="st">&quot;accuracy&quot;</span>: accuracy, <span class="st">&quot;sensitivity&quot;</span>: sensitivity,</span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>            <span class="st">&quot;specificity&quot;</span>: specificity, <span class="st">&quot;auc&quot;</span>: auc_val, <span class="st">&quot;fpr&quot;</span>: fpr, <span class="st">&quot;tpr&quot;</span>: tpr}</span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 6] Logistic Regression -- Model Evaluation&quot;</span>)</span>
-<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>lr_pred_prob <span class="op">=</span> logit_model.predict(X_test_const)</span>
-<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>lr_pred_class <span class="op">=</span> (lr_pred_prob <span class="op">&gt;</span> <span class="fl">0.5</span>).astype(<span class="bu">int</span>)</span>
-<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a>lr_results <span class="op">=</span> evaluate_classifier(<span class="st">&quot;Logistic Regression&quot;</span>, y_test, lr_pred_class, lr_pred_prob)</span>
-<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">6</span>))</span>
-<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a>ax.plot(lr_results[<span class="st">&quot;fpr&quot;</span>], lr_results[<span class="st">&quot;tpr&quot;</span>], color<span class="op">=</span><span class="st">&quot;#E74C3C&quot;</span>, linewidth<span class="op">=</span><span class="dv">2</span>,</span>
-<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a>        label<span class="op">=</span><span class="ss">f&quot;AUC = </span><span class="sc">{</span>lr_results[<span class="st">&#39;auc&#39;</span>]<span class="sc">:.4f}</span><span class="ss">&quot;</span>)</span>
-<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a>ax.plot([<span class="dv">0</span>, <span class="dv">1</span>], [<span class="dv">0</span>, <span class="dv">1</span>], linestyle<span class="op">=</span><span class="st">&quot;--&quot;</span>, color<span class="op">=</span><span class="st">&quot;gray&quot;</span>)</span>
-<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">&quot;ROC Curve - Logistic Regression&quot;</span>, fontsize<span class="op">=</span><span class="dv">13</span>, fontweight<span class="op">=</span><span class="st">&quot;bold&quot;</span>)</span>
-<span id="cb18-41"><a href="#cb18-41" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">&quot;False Positive Rate&quot;</span>)</span>
-<span id="cb18-42"><a href="#cb18-42" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">&quot;True Positive Rate&quot;</span>)</span>
-<span id="cb18-43"><a href="#cb18-43" aria-hidden="true" tabindex="-1"></a>ax.legend(loc<span class="op">=</span><span class="st">&quot;lower right&quot;</span>)</span>
-<span id="cb18-44"><a href="#cb18-44" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
-<span id="cb18-45"><a href="#cb18-45" aria-hidden="true" tabindex="-1"></a>plt.savefig(<span class="st">&quot;../Data/rq4_lr_roc.png&quot;</span>, dpi<span class="op">=</span><span class="dv">120</span>)</span>
-<span id="cb18-46"><a href="#cb18-46" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
-<span id="cb18-47"><a href="#cb18-47" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[SAVED] rq4_lr_roc.png&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 6] Logistic Regression -- Model Evaluation&quot;</span>)</span>
+<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>lr_pred_prob <span class="op">=</span> logit_model.predict(X_test_const)</span>
+<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>lr_pred_class <span class="op">=</span> (lr_pred_prob <span class="op">&gt;</span> <span class="fl">0.5</span>).astype(<span class="bu">int</span>)</span>
+<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a>lr_results <span class="op">=</span> evaluate_classifier(<span class="st">&quot;Logistic Regression&quot;</span>, y_test, lr_pred_class, lr_pred_prob)</span>
+<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">6</span>))</span>
+<span id="cb18-36"><a href="#cb18-36" aria-hidden="true" tabindex="-1"></a>ax.plot(lr_results[<span class="st">&quot;fpr&quot;</span>], lr_results[<span class="st">&quot;tpr&quot;</span>], color<span class="op">=</span><span class="st">&quot;#E74C3C&quot;</span>, linewidth<span class="op">=</span><span class="dv">2</span>,</span>
+<span id="cb18-37"><a href="#cb18-37" aria-hidden="true" tabindex="-1"></a>        label<span class="op">=</span><span class="ss">f&quot;AUC = </span><span class="sc">{</span>lr_results[<span class="st">&#39;auc&#39;</span>]<span class="sc">:.4f}</span><span class="ss">&quot;</span>)</span>
+<span id="cb18-38"><a href="#cb18-38" aria-hidden="true" tabindex="-1"></a>ax.plot([<span class="dv">0</span>, <span class="dv">1</span>], [<span class="dv">0</span>, <span class="dv">1</span>], linestyle<span class="op">=</span><span class="st">&quot;--&quot;</span>, color<span class="op">=</span><span class="st">&quot;gray&quot;</span>)</span>
+<span id="cb18-39"><a href="#cb18-39" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">&quot;ROC Curve - Logistic Regression&quot;</span>, fontsize<span class="op">=</span><span class="dv">13</span>, fontweight<span class="op">=</span><span class="st">&quot;bold&quot;</span>)</span>
+<span id="cb18-40"><a href="#cb18-40" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">&quot;False Positive Rate&quot;</span>)</span>
+<span id="cb18-41"><a href="#cb18-41" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">&quot;True Positive Rate&quot;</span>)</span>
+<span id="cb18-42"><a href="#cb18-42" aria-hidden="true" tabindex="-1"></a>ax.legend(loc<span class="op">=</span><span class="st">&quot;lower right&quot;</span>)</span>
+<span id="cb18-43"><a href="#cb18-43" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb18-44"><a href="#cb18-44" aria-hidden="true" tabindex="-1"></a>plt.savefig(<span class="st">&quot;../Data/rq4_lr_roc.png&quot;</span>, dpi<span class="op">=</span><span class="dv">120</span>)</span>
+<span id="cb18-45"><a href="#cb18-45" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb18-46"><a href="#cb18-46" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[SAVED] rq4_lr_roc.png&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[STEP 6] Logistic Regression -- Model Evaluation
 
@@ -2810,8 +2809,8 @@ AUC:         0.8071</code></pre>
 <h2 class="anchored" data-anchor-id="part-2-random-forest">Part 2: Random Forest</h2>
 <section id="step-7-model-building" class="level3">
 <h3 class="anchored" data-anchor-id="step-7-model-building">Step 7 — Model Building</h3>
-<p>500 trees, <code>random_state=42</code> mirroring R’s <code>set.seed(42)</code> (same seed number, not the same trees — see the reproducibility note above). scikit-learn’s default <code>max_features=&quot;sqrt&quot;</code> matches R <code>randomForest</code>’s default <code>mtry = floor(sqrt(n_features))</code> for classification (floor(sqrt(10)) = 3), so the hyperparameters are aligned.</p>
-<div id="16cbe089" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T21:59:45.842314Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T21:59:45.842128Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:25.705861Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:25.705355Z&quot;}}" data-execution_count="10">
+<p>500 trees, <code>random_state=42</code> for reproducibility. scikit-learn’s default <code>max_features=&quot;sqrt&quot;</code> (floor(sqrt(10)) = 3 features considered per split) is the standard setting for classification random forests.</p>
+<div id="16cbe089" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:34:58.492456Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:34:58.492289Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:35:42.836525Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:35:42.835686Z&quot;}}" data-execution_count="10">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 7] Random Forest -- Model Building&quot;</span>)</span>
 <span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>rf_model <span class="op">=</span> RandomForestClassifier(</span>
@@ -2833,9 +2832,9 @@ OOB available: False</code></pre>
 </section>
 <section id="step-8-feature-importance" class="level3">
 <h3 class="anchored" data-anchor-id="step-8-feature-importance">Step 8 — Feature Importance</h3>
-<p><strong>Methodology note — not an exact match to R:</strong> R’s <code>randomForest(importance=TRUE)</code> computes accuracy drop from permuting a feature within <strong>OOB (out-of-bag)</strong> samples — the rows each tree didn’t see during training. scikit-learn has no direct equivalent, so this uses <code>sklearn.inspection.permutation_importance()</code> instead — same concept (shuffle a feature, measure the accuracy drop), but sourced from the <strong>test set</strong>, not OOB samples. Both measure a feature’s real contribution to accuracy; the sampling source differs, so the ranking direction should hold but exact values won’t match.</p>
-<p><code>feature_importances_</code> (scikit-learn’s built-in Gini/impurity-based importance) is also kept, corresponding to R’s <code>MeanDecreaseGini</code>.</p>
-<div id="3b781ac8" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:25.707613Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:25.707462Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:42.145545Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:42.144956Z&quot;}}" data-execution_count="11">
+<p><strong>Methodology note:</strong> <code>sklearn.inspection.permutation_importance()</code> measures a feature’s real contribution to accuracy by shuffling it and checking how much accuracy drops on the <strong>test set</strong> (data the model never trained on) — the standard scikit-learn approach for measuring genuine predictive contribution rather than in-sample fit.</p>
+<p><code>feature_importances_</code> (scikit-learn’s built-in Gini/impurity-based importance) is also kept — a second, faster-to-compute importance measure based on how much each feature reduces impurity across the tree splits it’s used in.</p>
+<div id="3b781ac8" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:35:42.838792Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:35:42.838528Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:01.806113Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:01.805367Z&quot;}}" data-execution_count="11">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 8] Random Forest -- Feature Importance&quot;</span>)</span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>perm <span class="op">=</span> permutation_importance(</span>
@@ -2872,7 +2871,7 @@ instrumentalness                0.0978            0.1876
 <section id="step-9-feature-importance-visualization" class="level3">
 <h3 class="anchored" data-anchor-id="step-9-feature-importance-visualization">Step 9 — Feature Importance Visualization</h3>
 <p>Sorted by <code>MeanDecreaseAccuracy</code> — a longer bar means shuffling that feature hurts accuracy more, i.e. the model relies on it more.</p>
-<div id="77939b7d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:42.147390Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:42.147185Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:42.323477Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:42.322925Z&quot;}}" data-execution_count="12">
+<div id="77939b7d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:36:01.809284Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:36:01.809064Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:02.064974Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:02.064408Z&quot;}}" data-execution_count="12">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 9] Random Forest -- Feature Importance Plot&quot;</span>)</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>plot_imp <span class="op">=</span> importance_df.sort_values(<span class="st">&quot;MeanDecreaseAccuracy&quot;</span>)</span>
@@ -2907,7 +2906,7 @@ instrumentalness                0.0978            0.1876
 <section id="step-10-model-evaluation" class="level3">
 <h3 class="anchored" data-anchor-id="step-10-model-evaluation">Step 10 — Model Evaluation</h3>
 <p>Same <code>evaluate_classifier()</code> as Step 6, reused rather than re-implemented.</p>
-<div id="4c413c99" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:42.325553Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:42.325346Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:43.722810Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:43.722276Z&quot;}}" data-execution_count="13">
+<div id="4c413c99" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:36:02.066751Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:36:02.066559Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:03.467666Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:03.467305Z&quot;}}" data-execution_count="13">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 10] Random Forest -- Model Evaluation&quot;</span>)</span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>rf_pred_class <span class="op">=</span> rf_model.predict(X_test)</span>
@@ -2960,7 +2959,7 @@ AUC:         0.8666</code></pre>
 <h2 class="anchored" data-anchor-id="part-3-model-comparison">Part 3: Model Comparison</h2>
 <section id="step-11-performance-comparison-table" class="level3">
 <h3 class="anchored" data-anchor-id="step-11-performance-comparison-table">Step 11 — Performance Comparison Table</h3>
-<div id="b8e290bc" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:43.724900Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:43.724702Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:43.730617Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:43.729747Z&quot;}}" data-execution_count="14">
+<div id="b8e290bc" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:36:03.469868Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:36:03.469602Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:03.477389Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:03.476857Z&quot;}}" data-execution_count="14">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 11] Model Performance Comparison&quot;</span>)</span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>comparison_df <span class="op">=</span> pd.DataFrame({</span>
@@ -2983,7 +2982,7 @@ Logistic Regression    0.7293 0.8071       0.8095       0.6490
 <section id="step-12-roc-curve-comparison" class="level3">
 <h3 class="anchored" data-anchor-id="step-12-roc-curve-comparison">Step 12 — ROC Curve Comparison</h3>
 <p>Both ROC curves on one chart for a direct visual comparison of discriminative power.</p>
-<div id="66dcec87" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:43.733649Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:43.733333Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:43.957620Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:43.956782Z&quot;}}" data-execution_count="15">
+<div id="66dcec87" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:36:03.479537Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:36:03.479248Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:03.651569Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:03.651025Z&quot;}}" data-execution_count="15">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 12] ROC Curve Comparison&quot;</span>)</span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">6</span>))</span>
@@ -3021,7 +3020,7 @@ Logistic Regression    0.7293 0.8071       0.8095       0.6490
 <section id="step-13-feature-importance-comparison" class="level3">
 <h3 class="anchored" data-anchor-id="step-13-feature-importance-comparison">Step 13 — Feature Importance Comparison</h3>
 <p>The two models compute importance differently (LR: absolute coefficient value; RF: permutation importance) — each is scaled to 0-1 independently before being placed on the same chart.</p>
-<div id="f5061ce5" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:43.961148Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:43.960829Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:44.227049Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:44.226697Z&quot;}}" data-execution_count="16">
+<div id="f5061ce5" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:36:03.653698Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:36:03.653504Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:03.878868Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:03.878214Z&quot;}}" data-execution_count="16">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 13] Feature Importance Comparison&quot;</span>)</span>
 <span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>lr_imp <span class="op">=</span> coef_df[coef_df[<span class="st">&quot;term&quot;</span>] <span class="op">!=</span> <span class="st">&quot;const&quot;</span>].copy()</span>
@@ -3081,8 +3080,8 @@ Logistic Regression    0.7293 0.8071       0.8095       0.6490
 </section>
 <section id="step-14-summary-limitations" class="level3">
 <h3 class="anchored" data-anchor-id="step-14-summary-limitations">Step 14 — Summary &amp; Limitations</h3>
-<p>Answers RQ4 directly. The numbers below are read live from this notebook’s own run, not copied from the R original (which reported LR Accuracy≈0.723/AUC≈0.803, RF Accuracy≈0.788/AUC≈0.868) — comparable in magnitude, not expected to match digit-for-digit (see the reproducibility note above).</p>
-<div id="c45bb7bc" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:44.229042Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:44.228759Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:44.238525Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:44.237923Z&quot;}}" data-execution_count="17">
+<p>Answers RQ4 directly. The numbers below are read live from this notebook’s own run each time it executes.</p>
+<div id="c45bb7bc" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:36:03.880888Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:36:03.880700Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:03.888077Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:03.887644Z&quot;}}" data-execution_count="17">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 14] Final Summary &amp; Limitations&quot;</span>)</span>
 <span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>better_model <span class="op">=</span> <span class="st">&quot;Random Forest&quot;</span> <span class="cf">if</span> rf_results[<span class="st">&quot;auc&quot;</span>] <span class="op">&gt;</span> lr_results[<span class="st">&quot;auc&quot;</span>] <span class="cf">else</span> <span class="st">&quot;Logistic Regression&quot;</span></span>
@@ -3097,39 +3096,28 @@ Logistic Regression    0.7293 0.8071       0.8095       0.6490
 <span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;</span><span class="ch">\n</span><span class="ss">Model Performance Summary&quot;</span>)</span>
 <span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;  Logistic Regression : Accuracy = </span><span class="sc">{</span>lr_results[<span class="st">&#39;accuracy&#39;</span>]<span class="sc">:.4f}</span><span class="ss"> | AUC = </span><span class="sc">{</span>lr_results[<span class="st">&#39;auc&#39;</span>]<span class="sc">:.4f}</span><span class="ss">&quot;</span>)</span>
 <span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;  Random Forest        : Accuracy = </span><span class="sc">{</span>rf_results[<span class="st">&#39;accuracy&#39;</span>]<span class="sc">:.4f}</span><span class="ss"> | AUC = </span><span class="sc">{</span>rf_results[<span class="st">&#39;auc&#39;</span>]<span class="sc">:.4f}</span><span class="ss">&quot;</span>)</span>
-<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;  R original (reference): LR Accuracy ~= 0.723 | AUC ~= 0.803&quot;</span>)</span>
-<span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;                          RF Accuracy ~= 0.788 | AUC ~= 0.868&quot;</span>)</span>
-<span id="cb39-17"><a href="#cb39-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb39-18"><a href="#cb39-18" aria-hidden="true" tabindex="-1"></a>r_named_features <span class="op">=</span> {<span class="st">&quot;instrumentalness&quot;</span>, <span class="st">&quot;danceability&quot;</span>, <span class="st">&quot;speechiness&quot;</span>, <span class="st">&quot;acousticness&quot;</span>}</span>
-<span id="cb39-19"><a href="#cb39-19" aria-hidden="true" tabindex="-1"></a>python_top_features <span class="op">=</span> <span class="bu">set</span>(top_lr_features) <span class="op">|</span> <span class="bu">set</span>(top_rf_features)</span>
-<span id="cb39-20"><a href="#cb39-20" aria-hidden="true" tabindex="-1"></a>overlap <span class="op">=</span> r_named_features <span class="op">&amp;</span> python_top_features</span>
-<span id="cb39-21"><a href="#cb39-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb39-22"><a href="#cb39-22" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;</span><span class="ch">\n</span><span class="ss">Key Findings&quot;</span>)</span>
-<span id="cb39-23"><a href="#cb39-23" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;  1. Model superiority: </span><span class="sc">{</span>better_model<span class="sc">}</span><span class="ss"> achieved the higher AUC in this run,&quot;</span>)</span>
-<span id="cb39-24"><a href="#cb39-24" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;     </span><span class="sc">{</span><span class="st">&#39;consistent with&#39;</span> <span class="cf">if</span> better_model <span class="op">==</span> <span class="st">&#39;Random Forest&#39;</span> <span class="cf">else</span> <span class="st">&#39;differing from&#39;</span><span class="sc">}</span><span class="ss"> R&#39;s original conclusion that&quot;</span>)</span>
-<span id="cb39-25"><a href="#cb39-25" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;     non-linear relationships exist between audio features and chart success.&quot;</span>)</span>
-<span id="cb39-26"><a href="#cb39-26" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;  2. Top LR features (by |scaled coefficient|): </span><span class="sc">{</span><span class="st">&#39;, &#39;</span><span class="sc">.</span>join(top_lr_features)<span class="sc">}</span><span class="ss">&quot;</span>)</span>
-<span id="cb39-27"><a href="#cb39-27" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;     Top RF features (by scaled permutation importance): </span><span class="sc">{</span><span class="st">&#39;, &#39;</span><span class="sc">.</span>join(top_rf_features)<span class="sc">}</span><span class="ss">&quot;</span>)</span>
-<span id="cb39-28"><a href="#cb39-28" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;     R&#39;s named top-4 (instrumentalness/danceability/speechiness/acousticness):&quot;</span>)</span>
-<span id="cb39-29"><a href="#cb39-29" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;     </span><span class="sc">{</span><span class="bu">len</span>(overlap)<span class="sc">}</span><span class="ss">/4 also appear in this run&#39;s top-4 lists above (</span><span class="sc">{</span><span class="st">&#39;, &#39;</span><span class="sc">.</span>join(<span class="bu">sorted</span>(overlap))<span class="sc">}</span><span class="ss">)&quot;</span>)</span>
-<span id="cb39-30"><a href="#cb39-30" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;  3. AUC of </span><span class="sc">{</span>rf_results[<span class="st">&#39;auc&#39;</span>]<span class="sc">:.2f}</span><span class="ss"> (Random Forest) indicates meaningful but incomplete&quot;</span>)</span>
-<span id="cb39-31"><a href="#cb39-31" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;     discriminative power -- a large share of variance remains unexplained by&quot;</span>)</span>
-<span id="cb39-32"><a href="#cb39-32" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;     audio features alone (marketing, artist reputation, timing, etc.).&quot;</span>)</span>
-<span id="cb39-33"><a href="#cb39-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb39-34"><a href="#cb39-34" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;</span><span class="ch">\n</span><span class="ss">Analysis Limitations&quot;</span>)</span>
-<span id="cb39-35"><a href="#cb39-35" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;  - Temporal Bias: six decades pooled into one model; feature-hit relationships&quot;</span>)</span>
-<span id="cb39-36"><a href="#cb39-36" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;    may shift by era (a decade-specific model is future work, not done here).&quot;</span>)</span>
-<span id="cb39-37"><a href="#cb39-37" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;  - Label Definition: hit/flop is defined by the D2 dataset author, and may not&quot;</span>)</span>
-<span id="cb39-38"><a href="#cb39-38" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;    perfectly align with official Billboard chart placement.&quot;</span>)</span>
-<span id="cb39-39"><a href="#cb39-39" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;  - Missing Variables: non-musical factors (marketing budget, social media reach,&quot;</span>)</span>
-<span id="cb39-40"><a href="#cb39-40" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;    artist fame) are not in this dataset and are not modeled.&quot;</span>)</span>
-<span id="cb39-41"><a href="#cb39-41" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;  - Genre Bias: audio feature distributions vary by genre; this may affect how&quot;</span>)</span>
-<span id="cb39-42"><a href="#cb39-42" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;    fairly the model generalizes across genres.&quot;</span>)</span>
-<span id="cb39-43"><a href="#cb39-43" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;  - Cross-language reproducibility: R and Python train/test splits use different&quot;</span>)</span>
-<span id="cb39-44"><a href="#cb39-44" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;    RNG implementations under the same seed -- exact metric values will not match&quot;</span>)</span>
-<span id="cb39-45"><a href="#cb39-45" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;    R&#39;s reported numbers even though the underlying data and features are identical.&quot;</span>)</span>
-<span id="cb39-46"><a href="#cb39-46" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;  - RF importance methodology: MeanDecreaseAccuracy here is computed via test-set&quot;</span>)</span>
-<span id="cb39-47"><a href="#cb39-47" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;    permutation importance, not R&#39;s OOB-sample permutation importance (see Step 8).&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;</span><span class="ch">\n</span><span class="ss">Key Findings&quot;</span>)</span>
+<span id="cb39-17"><a href="#cb39-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;  1. Model superiority: </span><span class="sc">{</span>better_model<span class="sc">}</span><span class="ss"> achieved the higher AUC in this run,&quot;</span>)</span>
+<span id="cb39-18"><a href="#cb39-18" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;     suggesting non-linear relationships exist between audio features and chart&quot;</span>)</span>
+<span id="cb39-19"><a href="#cb39-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;     success that Logistic Regression&#39;s linear decision boundary can&#39;t fully capture.&quot;</span>)</span>
+<span id="cb39-20"><a href="#cb39-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;  2. Top LR features (by |scaled coefficient|): </span><span class="sc">{</span><span class="st">&#39;, &#39;</span><span class="sc">.</span>join(top_lr_features)<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb39-21"><a href="#cb39-21" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;     Top RF features (by scaled permutation importance): </span><span class="sc">{</span><span class="st">&#39;, &#39;</span><span class="sc">.</span>join(top_rf_features)<span class="sc">}</span><span class="ss">&quot;</span>)</span>
+<span id="cb39-22"><a href="#cb39-22" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;  3. AUC of </span><span class="sc">{</span>rf_results[<span class="st">&#39;auc&#39;</span>]<span class="sc">:.2f}</span><span class="ss"> (Random Forest) indicates meaningful but incomplete&quot;</span>)</span>
+<span id="cb39-23"><a href="#cb39-23" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;     discriminative power -- a large share of variance remains unexplained by&quot;</span>)</span>
+<span id="cb39-24"><a href="#cb39-24" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;     audio features alone (marketing, artist reputation, timing, etc.).&quot;</span>)</span>
+<span id="cb39-25"><a href="#cb39-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-26"><a href="#cb39-26" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&quot;</span><span class="ch">\n</span><span class="ss">Analysis Limitations&quot;</span>)</span>
+<span id="cb39-27"><a href="#cb39-27" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;  - Temporal Bias: six decades pooled into one model; feature-hit relationships&quot;</span>)</span>
+<span id="cb39-28"><a href="#cb39-28" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;    may shift by era (a decade-specific model is future work, not done here).&quot;</span>)</span>
+<span id="cb39-29"><a href="#cb39-29" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;  - Label Definition: hit/flop is defined by the dataset author, and may not&quot;</span>)</span>
+<span id="cb39-30"><a href="#cb39-30" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;    perfectly align with official Billboard chart placement.&quot;</span>)</span>
+<span id="cb39-31"><a href="#cb39-31" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;  - Missing Variables: non-musical factors (marketing budget, social media reach,&quot;</span>)</span>
+<span id="cb39-32"><a href="#cb39-32" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;    artist fame) are not in this dataset and are not modeled.&quot;</span>)</span>
+<span id="cb39-33"><a href="#cb39-33" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;  - Genre Bias: audio feature distributions vary by genre; this may affect how&quot;</span>)</span>
+<span id="cb39-34"><a href="#cb39-34" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;    fairly the model generalizes across genres.&quot;</span>)</span>
+<span id="cb39-35"><a href="#cb39-35" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;  - RF importance methodology: MeanDecreaseAccuracy here is computed via test-set&quot;</span>)</span>
+<span id="cb39-36"><a href="#cb39-36" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;    permutation importance rather than out-of-bag permutation importance (see Step 8).&quot;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[STEP 14] Final Summary &amp; Limitations
 ============================================================
@@ -3140,17 +3128,13 @@ associated with a song&#39;s chart performance?
 Model Performance Summary
   Logistic Regression : Accuracy = 0.7293 | AUC = 0.8071
   Random Forest        : Accuracy = 0.7842 | AUC = 0.8666
-  R original (reference): LR Accuracy ~= 0.723 | AUC ~= 0.803
-                          RF Accuracy ~= 0.788 | AUC ~= 0.868
 
 Key Findings
   1. Model superiority: Random Forest achieved the higher AUC in this run,
-     consistent with R&#39;s original conclusion that
-     non-linear relationships exist between audio features and chart success.
+     suggesting non-linear relationships exist between audio features and chart
+     success that Logistic Regression&#39;s linear decision boundary can&#39;t fully capture.
   2. Top LR features (by |scaled coefficient|): speechiness, instrumentalness, danceability, energy
      Top RF features (by scaled permutation importance): instrumentalness, acousticness, danceability, duration_ms
-     R&#39;s named top-4 (instrumentalness/danceability/speechiness/acousticness):
-     4/4 also appear in this run&#39;s top-4 lists above (acousticness, danceability, instrumentalness, speechiness)
   3. AUC of 0.87 (Random Forest) indicates meaningful but incomplete
      discriminative power -- a large share of variance remains unexplained by
      audio features alone (marketing, artist reputation, timing, etc.).
@@ -3158,17 +3142,14 @@ Key Findings
 Analysis Limitations
   - Temporal Bias: six decades pooled into one model; feature-hit relationships
     may shift by era (a decade-specific model is future work, not done here).
-  - Label Definition: hit/flop is defined by the D2 dataset author, and may not
+  - Label Definition: hit/flop is defined by the dataset author, and may not
     perfectly align with official Billboard chart placement.
   - Missing Variables: non-musical factors (marketing budget, social media reach,
     artist fame) are not in this dataset and are not modeled.
   - Genre Bias: audio feature distributions vary by genre; this may affect how
     fairly the model generalizes across genres.
-  - Cross-language reproducibility: R and Python train/test splits use different
-    RNG implementations under the same seed -- exact metric values will not match
-    R&#39;s reported numbers even though the underlying data and features are identical.
   - RF importance methodology: MeanDecreaseAccuracy here is computed via test-set
-    permutation importance, not R&#39;s OOB-sample permutation importance (see Step 8).</code></pre>
+    permutation importance rather than out-of-bag permutation importance (see Step 8).</code></pre>
 </div>
 </div>
 </section>
@@ -3185,7 +3166,7 @@ Analysis Limitations
 <p><strong>Why interaction terms, specifically:</strong> LR’s formula (intercept + weight × feature, summed) can only draw a straight line per feature — it has no way to represent “feature A matters more when feature B is also high.” RF’s tree-vote structure can capture that kind of combination effect natively. Multiplying two features into a new column is the standard way to let a linear model test for it explicitly.</p>
 <p><strong>Why these three pairs, not others:</strong> (1) each term pairs features that already rank highly individually in Steps 4 and 8, giving the interaction a better chance of reflecting a real signal rather than noise; (2) each has a plausible musical rationale — <code>dance_x_energy</code> (the classic upbeat dance-track combination), <code>instrumental_x_acoustic</code> (two already-negative features, testing whether they compound), <code>dance_x_valence</code> (danceable + upbeat, a common “earworm” formula); (3) pairs already flagged as highly correlated in Step 1b (e.g. <code>energy</code>/<code>loudness</code> at 0.773) are deliberately avoided, since interacting already-redundant features would only worsen multicollinearity.</p>
 <p>15 features total (10 original + 2 era dummies + 3 interaction terms), run through the complete pipeline: model → coefficient table → coefficient plot → test-set evaluation (confusion matrix, accuracy, sensitivity, specificity, AUC, ROC) — same format as Steps 3-6, for direct comparison.</p>
-<div id="6666e51b" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:44.240452Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:44.240143Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:44.263562Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:44.262891Z&quot;}}" data-execution_count="18">
+<div id="6666e51b" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:36:03.890096Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:36:03.889933Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:03.908462Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:03.907967Z&quot;}}" data-execution_count="18">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 15a] Build Extended Dataset (Tech Era + Interaction Terms)&quot;</span>)</span>
 <span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>decade_to_era <span class="op">=</span> {</span>
@@ -3232,7 +3213,7 @@ Extended feature set (15 features):
 <section id="step-15a-2-tech-era-vs.-the-original-10-features" class="level3">
 <h3 class="anchored" data-anchor-id="step-15a-2-tech-era-vs.-the-original-10-features">Step 15a-2 — Tech Era vs. the Original 10 Features</h3>
 <p>Before adding technology era to the model, check whether it substantially overlaps with any existing feature (same |r| &gt; 0.7 threshold as Step 1b) — if era were nearly identical to an existing feature, adding it would contribute little.</p>
-<div id="61212d40" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:44.266410Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:44.266033Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:44.283745Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:44.283281Z&quot;}}" data-execution_count="19">
+<div id="61212d40" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:36:03.910268Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:36:03.910082Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:03.927887Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:03.927338Z&quot;}}" data-execution_count="19">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 15a-2] Correlation Check: Tech Era vs. Original 10 Features&quot;</span>)</span>
 <span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>corr_check <span class="op">=</span> model_df_ext[CONFIG[<span class="st">&quot;feature_cols&quot;</span>] <span class="op">+</span> <span class="bu">list</span>(era_dummies.columns)].corr()</span>
@@ -3262,7 +3243,7 @@ duration_ms                      0.116          0.007
 No |r| &gt; 0.7 pairs -- tech era is not redundant with the existing 10 features.</code></pre>
 </div>
 </div>
-<div id="660e5403" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:44.286174Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:44.285914Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:44.555846Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:44.555282Z&quot;}}" data-execution_count="20">
+<div id="660e5403" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:36:03.930193Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:36:03.929929Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:04.181686Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:04.181163Z&quot;}}" data-execution_count="20">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 15a-3] Correlation Heatmap: Tech Era vs. Original 10 Features&quot;</span>)</span>
 <span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="fl">4.5</span>, <span class="dv">7</span>))</span>
@@ -3305,7 +3286,7 @@ variable logic as the const column&#39;s baseline role in Step 3.</code></pre>
 </div>
 </div>
 <p><strong>Verified result:</strong> every pairing comes in under |r| &lt; 0.7 — technology era carries information independent of the existing 10 features, and is worth adding. The direction of each correlation also lines up with the RQ2 EDA findings rather than appearing out of nowhere: <code>loudness</code> rises with digitization (the “loudness war”), <code>acousticness</code> falls (the shift toward electronic production), <code>valence</code> is most negative in the streaming era (matching RQ2’s lowest-valence period), and <code>energy</code> rises with both eras — consistent, cross-checked signal from the same underlying data, not a coincidence.</p>
-<div id="87661932" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:44.557952Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:44.557788Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:44.578150Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:44.577699Z&quot;}}" data-execution_count="21">
+<div id="87661932" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:36:04.183700Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:36:04.183538Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:04.206399Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:04.205803Z&quot;}}" data-execution_count="21">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 15b] Train / Test Split (Extended Feature Set, 80/20, stratified)&quot;</span>)</span>
 <span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>X_ext <span class="op">=</span> model_df_ext[extended_feature_cols]</span>
@@ -3326,7 +3307,7 @@ Train set size: 32,884
 Test set size:  8,222</code></pre>
 </div>
 </div>
-<div id="ffaec51a" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:44.579782Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:44.579614Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:44.639286Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:44.638524Z&quot;}}" data-execution_count="22">
+<div id="ffaec51a" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:36:04.208621Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:36:04.208355Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:04.260540Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:04.260171Z&quot;}}" data-execution_count="22">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 15c] Logistic Regression -- Extended Model Construction&quot;</span>)</span>
 <span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>X_train_ext_const <span class="op">=</span> sm.add_constant(X_train_ext, has_constant<span class="op">=</span><span class="st">&quot;add&quot;</span>)</span>
@@ -3338,7 +3319,7 @@ Test set size:  8,222</code></pre>
 <pre><code>[STEP 15c] Logistic Regression -- Extended Model Construction
              Model:            Logit           Method:        MLE
 Dependent Variable:           target Pseudo R-squared:      0.254
-              Date: 2026-08-22 18:00              AIC: 34021.3171
+              Date: 2026-08-22 19:36              AIC: 34021.3171
   No. Observations:            32884              BIC: 34155.7290
           Df Model:               15   Log-Likelihood:    -16995.
       Df Residuals:            32868          LL-Null:    -22793.
@@ -3346,7 +3327,7 @@ Dependent Variable:           target Pseudo R-squared:      0.254
     No. Iterations:           7.0000            Scale:     1.0000</code></pre>
 </div>
 </div>
-<div id="a3a37be4" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:44.641431Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:44.641237Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:44.652034Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:44.651425Z&quot;}}" data-execution_count="23">
+<div id="a3a37be4" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:36:04.262698Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:36:04.262448Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:04.273600Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:04.273192Z&quot;}}" data-execution_count="23">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 15d] Coefficient Table (Extended Model, sorted by p-value)&quot;</span>)</span>
 <span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>coef_df_ext <span class="op">=</span> pd.DataFrame({</span>
@@ -3392,7 +3373,7 @@ Extended Pseudo R-squared (15 features):   0.2544
 Change: +0.0224</code></pre>
 </div>
 </div>
-<div id="c1949ed1" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:44.654461Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:44.654224Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:44.662132Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:44.661420Z&quot;}}" data-execution_count="24">
+<div id="c1949ed1" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:36:04.276263Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:36:04.275975Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:04.285280Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:04.284718Z&quot;}}" data-execution_count="24">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 15d-2] Significant Terms (p &lt; 0.01), Sorted by Strength (|estimate|)&quot;</span>)</span>
 <span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Different question than Step 15d: not &quot;how sure are we&quot;, but</span></span>
@@ -3424,7 +3405,7 @@ instrumental_x_acoustic    1.3070 ↑ Positive    0.000
             duration_ms   -0.0000 ↓ Negative    0.000</code></pre>
 </div>
 </div>
-<div id="c291655d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:44.664484Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:44.664223Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:44.958915Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:44.958417Z&quot;}}" data-execution_count="25">
+<div id="c291655d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:36:04.287612Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:36:04.287350Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:04.553128Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:04.552575Z&quot;}}" data-execution_count="25">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 15e] Extended Model -- Coefficient Plot&quot;</span>)</span>
 <span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>plot_df_ext <span class="op">=</span> coef_df_ext[coef_df_ext[<span class="st">&quot;term&quot;</span>] <span class="op">!=</span> <span class="st">&quot;const&quot;</span>].copy()</span>
@@ -3468,7 +3449,7 @@ instrumental_x_acoustic    1.3070 ↑ Positive    0.000
 <pre><code>[SAVED] rq4_extended_coefficients.png</code></pre>
 </div>
 </div>
-<div id="00bb5c2d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T22:00:44.961019Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T22:00:44.960787Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T22:00:45.154054Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T22:00:45.153618Z&quot;}}" data-execution_count="26">
+<div id="00bb5c2d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:36:04.555940Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:36:04.555631Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:36:04.737251Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:36:04.736851Z&quot;}}" data-execution_count="26">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;[STEP 15f] Extended Model -- Evaluation on Test Set&quot;</span>)</span>
 <span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>ext_pred_prob <span class="op">=</span> logit_model_ext.predict(X_test_ext_const)</span>
