@@ -2279,7 +2279,7 @@ vertical-align: -.125em;
 </tr>
 </tbody>
 </table>
-<p><strong>Scope note:</strong> mirrors R’s join logic exactly (D1 as base table, D2 primary join, D3 auxiliary join) — nothing added or removed in scope, just the shared “dedup + left join + match rate” logic pulled into one function instead of R’s two separately hand-written blocks.</p>
+<p><strong>Design note:</strong> D1 stays the base table throughout, D2 gets joined first, D3 second — the shared “dedup + left join + match rate” logic is pulled into one function instead of two separately hand-written blocks.</p>
 </section>
 <section id="step-blueprint" class="level2">
 <h2 class="anchored" data-anchor-id="step-blueprint">Step Blueprint</h2>
@@ -2329,7 +2329,7 @@ vertical-align: -.125em;
 </tr>
 </tbody>
 </table>
-<div id="c65388ab" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:08:17.998949Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:08:17.998704Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:08:18.698901Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:08:18.698339Z&quot;}}" data-execution_count="1">
+<div id="c65388ab" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:31:14.597818Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:31:14.597675Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:31:15.322920Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:31:15.322346Z&quot;}}" data-execution_count="1">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load wrangled datasets from Stage 03</span></span>
@@ -2343,17 +2343,17 @@ vertical-align: -.125em;
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f&#39;D3 (Music):     </span><span class="sc">{</span><span class="bu">len</span>(d3)<span class="sc">:,}</span><span class="ss"> rows, </span><span class="sc">{</span>d3[<span class="st">&quot;join_key&quot;</span>]<span class="sc">.</span>nunique()<span class="sc">:,}</span><span class="ss"> unique join_key&#39;</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[STEP 1] Load Wrangled Data
-D1 (Billboard): 330,087 rows, 29,671 unique join_key
-D2 (Spotify):   41,106 rows, 39,851 unique join_key
+D1 (Billboard): 330,087 rows, 29,673 unique join_key
+D2 (Spotify):   41,106 rows, 39,852 unique join_key
 D3 (Music):     28,372 rows, 28,342 unique join_key</code></pre>
 </div>
 </div>
 </section>
 <section id="config-join_stages" class="level2">
 <h2 class="anchored" data-anchor-id="config-join_stages">CONFIG — <code>JOIN_STAGES</code></h2>
-<p><strong>A real critical-thinking case, not a guess:</strong> D3 happens to have columns also named <code>danceability</code>, <code>loudness</code>, <code>acousticness</code>, <code>instrumentalness</code>, <code>valence</code>, <code>energy</code> — same names as D2’s Spotify audio features, but a completely different source and computation. R’s original <code>select()</code> in Part 4 only pulls in 12 D3 columns (genre + 11 lyric-theme columns), deliberately excluding these name-colliding ones. Verified this was intentional, not an oversight — including both would force <code>left_join</code> to auto-suffix <code>_x</code>/<code>_y</code>, silently mixing two differently-sourced audio-feature sets under near-identical names, an easy source of misuse later. <strong>Ported R’s exact column selection here — only D3’s 12 non-colliding columns get carried over.</strong></p>
-<p><strong>Another decision ported faithfully, not “corrected”:</strong> both D2 and D3 are deduplicated on <code>join_key</code> before joining (<code>distinct(join_key, .keep_all=TRUE)</code> in R, <code>drop_duplicates()</code> here) — which keeps whichever row happens to appear first, not necessarily the “best” one by any rule. D2 has 41,106 rows but only 39,794 unique keys, meaning roughly 1,300 duplicate keys get resolved arbitrarily. This is an existing limitation in R’s original logic, not something introduced in translation — ported as-is; worth revisiting only if this arbitrary tie-break turns out to actually distort a downstream result.</p>
-<div id="6a01d5e0" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:08:18.700674Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:08:18.700521Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:08:18.705018Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:08:18.704394Z&quot;}}" data-execution_count="2">
+<p><strong>A real critical-thinking case, not a guess:</strong> D3 happens to have columns also named <code>danceability</code>, <code>loudness</code>, <code>acousticness</code>, <code>instrumentalness</code>, <code>valence</code>, <code>energy</code> — same names as D2’s Spotify audio features, but a completely different source and computation. Only 12 D3 columns get carried over (genre + 11 lyric-theme columns), deliberately excluding these name-colliding ones — including both would force <code>left_join</code> to auto-suffix <code>_x</code>/<code>_y</code>, silently mixing two differently-sourced audio-feature sets under near-identical names, an easy source of misuse later.</p>
+<p><strong>A known limitation, not a “fix”:</strong> both D2 and D3 are deduplicated on <code>join_key</code> before joining (<code>drop_duplicates()</code>, keeping the first occurrence) — which keeps whichever row happens to appear first, not necessarily the “best” one by any rule. D2 has 41,106 rows but only 39,794 unique keys, meaning roughly 1,300 duplicate keys get resolved arbitrarily. Worth revisiting only if this arbitrary tie-break turns out to actually distort a downstream result.</p>
+<div id="6a01d5e0" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:31:15.324697Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:31:15.324502Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:31:15.328087Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:31:15.327786Z&quot;}}" data-execution_count="2">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ============================================================</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># CONFIG -- Only edit this section when changing what each join carries over</span></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># ============================================================</span></span>
@@ -2391,38 +2391,37 @@ D3 (Music):     28,372 rows, 28,342 unique join_key</code></pre>
 <section id="engine-no-edits-needed-below-this-line" class="level2">
 <h2 class="anchored" data-anchor-id="engine-no-edits-needed-below-this-line">Engine — No edits needed below this line</h2>
 <p><code>dedup_and_left_join()</code> is the only join logic in this stage — both join stages (D1+D2, D1D2+D3) call the exact same function. It doesn’t know which dataset it’s joining, only “here’s a right-hand table, the columns to carry over, and a key — follow it, then report the match rate.”</p>
-<p>Execution order: 1. Dedup the right-hand table on <code>join_key</code> (keeps the first occurrence — matches R’s <code>distinct()</code> behavior) 2. Select <code>join_key</code> + the requested columns, left-join onto the base table 3. Use <code>match_indicator_col</code> to count successful matches, print the match rate</p>
-<div id="1bf893be" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:08:18.707070Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:08:18.706885Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:08:18.711319Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:08:18.710923Z&quot;}}" data-execution_count="3">
+<p>Execution order: 1. Dedup the right-hand table on <code>join_key</code> (keeps the first occurrence) 2. Select <code>join_key</code> + the requested columns, left-join onto the base table 3. Use <code>match_indicator_col</code> to count successful matches, print the match rate</p>
+<div id="1bf893be" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:31:15.329525Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:31:15.329390Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:31:15.333197Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:31:15.332662Z&quot;}}" data-execution_count="3">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> dedup_and_left_join(left_df, right_df, right_name, carry_columns, match_indicator_col, join_key<span class="op">=</span><span class="st">&quot;join_key&quot;</span>):</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;Generic join step used by both D1+D2 and D1D2+D3 stages.</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">    Dedups the right-hand table on join_key (keeps first occurrence, matching</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">    R&#39;s distinct(join_key, .keep_all=TRUE) behaviour -- arbitrary tie-break,</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">    inherited from R, not something this function decides), left-joins the</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co">    requested columns onto left_df, and reports the match rate.&quot;&quot;&quot;</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    before <span class="op">=</span> <span class="bu">len</span>(right_df)</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    right_dedup <span class="op">=</span> right_df.drop_duplicates(subset<span class="op">=</span>join_key, keep<span class="op">=</span><span class="st">&quot;first&quot;</span>)</span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;  </span><span class="sc">{</span>right_name<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>before<span class="sc">:,}</span><span class="ss"> rows -&gt; </span><span class="sc">{</span><span class="bu">len</span>(right_dedup)<span class="sc">:,}</span><span class="ss"> unique </span><span class="sc">{</span>join_key<span class="sc">}</span><span class="ss"> (dropped </span><span class="sc">{</span>before <span class="op">-</span> <span class="bu">len</span>(right_dedup)<span class="sc">:,}</span><span class="ss"> duplicates)&#39;</span>)</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    joined <span class="op">=</span> left_df.merge(</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        right_dedup[[join_key] <span class="op">+</span> carry_columns],</span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        on<span class="op">=</span>join_key,</span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        how<span class="op">=</span><span class="st">&quot;left&quot;</span>,</span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    total <span class="op">=</span> <span class="bu">len</span>(joined)</span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    matched <span class="op">=</span> joined[match_indicator_col].notna().<span class="bu">sum</span>()</span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    unmatched <span class="op">=</span> total <span class="op">-</span> matched</span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;  Total rows after join: </span><span class="sc">{</span>total<span class="sc">:,}</span><span class="ss">&#39;</span>)</span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;  Matched:   </span><span class="sc">{</span>matched<span class="sc">:,}</span><span class="ss"> rows (</span><span class="sc">{</span><span class="bu">round</span>(matched <span class="op">/</span> total <span class="op">*</span> <span class="dv">100</span>, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">%)&#39;</span>)</span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;  Unmatched: </span><span class="sc">{</span>unmatched<span class="sc">:,}</span><span class="ss"> rows (</span><span class="sc">{</span><span class="bu">round</span>(unmatched <span class="op">/</span> total <span class="op">*</span> <span class="dv">100</span>, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">%)&#39;</span>)</span>
-<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> joined</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">    Dedups the right-hand table on join_key (keeps first occurrence -- an</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co">    arbitrary tie-break, not something this function decides), left-joins the</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co">    requested columns onto left_df, and reports the match rate.&quot;&quot;&quot;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    before <span class="op">=</span> <span class="bu">len</span>(right_df)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    right_dedup <span class="op">=</span> right_df.drop_duplicates(subset<span class="op">=</span>join_key, keep<span class="op">=</span><span class="st">&quot;first&quot;</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;  </span><span class="sc">{</span>right_name<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>before<span class="sc">:,}</span><span class="ss"> rows -&gt; </span><span class="sc">{</span><span class="bu">len</span>(right_dedup)<span class="sc">:,}</span><span class="ss"> unique </span><span class="sc">{</span>join_key<span class="sc">}</span><span class="ss"> (dropped </span><span class="sc">{</span>before <span class="op">-</span> <span class="bu">len</span>(right_dedup)<span class="sc">:,}</span><span class="ss"> duplicates)&#39;</span>)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    joined <span class="op">=</span> left_df.merge(</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>        right_dedup[[join_key] <span class="op">+</span> carry_columns],</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        on<span class="op">=</span>join_key,</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        how<span class="op">=</span><span class="st">&quot;left&quot;</span>,</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    total <span class="op">=</span> <span class="bu">len</span>(joined)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    matched <span class="op">=</span> joined[match_indicator_col].notna().<span class="bu">sum</span>()</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    unmatched <span class="op">=</span> total <span class="op">-</span> matched</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;  Total rows after join: </span><span class="sc">{</span>total<span class="sc">:,}</span><span class="ss">&#39;</span>)</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;  Matched:   </span><span class="sc">{</span>matched<span class="sc">:,}</span><span class="ss"> rows (</span><span class="sc">{</span><span class="bu">round</span>(matched <span class="op">/</span> total <span class="op">*</span> <span class="dv">100</span>, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">%)&#39;</span>)</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f&#39;  Unmatched: </span><span class="sc">{</span>unmatched<span class="sc">:,}</span><span class="ss"> rows (</span><span class="sc">{</span><span class="bu">round</span>(unmatched <span class="op">/</span> total <span class="op">*</span> <span class="dv">100</span>, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">%)&#39;</span>)</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> joined</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="step-2-d1d2-primary-join" class="level2">
 <h2 class="anchored" data-anchor-id="step-2-d1d2-primary-join">Step 2 — D1+D2 Primary Join</h2>
-<div id="ae885d63" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:08:18.713311Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:08:18.713106Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:08:18.858299Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:08:18.857654Z&quot;}}" data-execution_count="4">
+<div id="ae885d63" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:31:15.335213Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:31:15.334976Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:31:15.493200Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:31:15.492724Z&quot;}}" data-execution_count="4">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;[STEP 2] D1 + D2 Join (Primary Join)&#39;</span>)</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>stage <span class="op">=</span> JOIN_STAGES[<span class="st">&quot;D1_D2&quot;</span>]</span>
@@ -2432,7 +2431,7 @@ D3 (Music):     28,372 rows, 28,342 unique join_key</code></pre>
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[STEP 2] D1 + D2 Join (Primary Join)
-  D2: 41,106 rows -&gt; 39,851 unique join_key (dropped 1,255 duplicates)
+  D2: 41,106 rows -&gt; 39,852 unique join_key (dropped 1,254 duplicates)
   Total rows after join: 330,087
   Matched:   264,478 rows (80.12%)
   Unmatched: 65,609 rows (19.88%)</code></pre>
@@ -2441,8 +2440,8 @@ D3 (Music):     28,372 rows, 28,342 unique join_key</code></pre>
 </section>
 <section id="step-3-match-rate-evaluation-overall-by-decade" class="level2">
 <h2 class="anchored" data-anchor-id="step-3-match-rate-evaluation-overall-by-decade">Step 3 — Match-Rate Evaluation: Overall + By Decade</h2>
-<p><strong>Two different “decades” here — worth being careful about the names:</strong> the joined-in <code>decade</code> column comes from D2 (Spotify’s own ‘60s’-‘10s’ labels); <code>decade_d1</code> here is computed separately from D1’s own <code>date</code> column (the decade a song actually charted). R’s original code keeps these separate and separately named too — kept the same naming here to avoid conflating them.</p>
-<div id="fea23625" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:08:18.860706Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:08:18.860518Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:08:18.957031Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:08:18.956371Z&quot;}}" data-execution_count="5">
+<p><strong>Two different “decades” here — worth being careful about the names:</strong> the joined-in <code>decade</code> column comes from D2 (Spotify’s own ‘60s’-‘10s’ labels); <code>decade_d1</code> here is computed separately from D1’s own <code>date</code> column (the decade a song actually charted). Kept separately named throughout to avoid conflating them.</p>
+<div id="fea23625" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:31:15.494777Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:31:15.494630Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:31:15.598835Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:31:15.598250Z&quot;}}" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;[STEP 3] D1+D2 Match Rate Evaluation&#39;</span>)</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>total <span class="op">=</span> <span class="bu">len</span>(d1_d2_joined)</span>
@@ -2484,7 +2483,7 @@ decade_d1  total  matched  match_pct
 </section>
 <section id="step-4-d1-d2-unmatched-sample-check" class="level2">
 <h2 class="anchored" data-anchor-id="step-4-d1-d2-unmatched-sample-check">Step 4 — D1-D2 Unmatched-Sample Check</h2>
-<div id="cc61e906" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:08:18.959184Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:08:18.958979Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:08:19.054531Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:08:19.054016Z&quot;}}" data-execution_count="6">
+<div id="cc61e906" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:31:15.602057Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:31:15.601738Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:31:15.698250Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:31:15.697787Z&quot;}}" data-execution_count="6">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;[STEP 4] D1-D2 Unmatched Records Sample Check&#39;</span>)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>unmatched_sample <span class="op">=</span> (</span>
@@ -2525,7 +2524,7 @@ the tommy dorsey orchestra starring warren covington        i want to be happy c
 </section>
 <section id="step-5-d1d2d3-auxiliary-join-full-validation" class="level2">
 <h2 class="anchored" data-anchor-id="step-5-d1d2d3-auxiliary-join-full-validation">Step 5 — D1+D2+D3 Auxiliary Join + Full Validation</h2>
-<div id="60862267" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:08:19.056370Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:08:19.056210Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:08:19.215721Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:08:19.215087Z&quot;}}" data-execution_count="7">
+<div id="60862267" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:31:15.700667Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:31:15.700422Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:31:15.865529Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:31:15.864877Z&quot;}}" data-execution_count="7">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;[STEP 5] D1 + D2 + D3 Join (Auxiliary Join)&#39;</span>)</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>stage <span class="op">=</span> JOIN_STAGES[<span class="st">&quot;D1D2_D3&quot;</span>]</span>
@@ -2535,7 +2534,7 @@ the tommy dorsey orchestra starring warren covington        i want to be happy c
 <span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>()</span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;-- Full validation (matches R Part 4) --&#39;</span>)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;-- Full validation --&#39;</span>)</span>
 <span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>total <span class="op">=</span> <span class="bu">len</span>(d1_d2_d3_joined)</span>
 <span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>d2_matched <span class="op">=</span> d1_d2_d3_joined[<span class="st">&quot;target&quot;</span>].notna().<span class="bu">sum</span>()</span>
 <span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>d3_matched <span class="op">=</span> d1_d2_d3_joined[<span class="st">&quot;genre&quot;</span>].notna().<span class="bu">sum</span>()</span>
@@ -2554,14 +2553,14 @@ the tommy dorsey orchestra starring warren covington        i want to be happy c
 <pre><code>[STEP 5] D1 + D2 + D3 Join (Auxiliary Join)
   D3: 28,372 rows -&gt; 28,342 unique join_key (dropped 30 duplicates)
   Total rows after join: 330,087
-  Matched:   46,028 rows (13.94%)
-  Unmatched: 284,059 rows (86.06%)
+  Matched:   45,553 rows (13.8%)
+  Unmatched: 284,534 rows (86.2%)
 
--- Full validation (matches R Part 4) --
+-- Full validation --
 Total rows:              330,087
 D2 matched (has target): 264,478 (80.12%)
-D3 matched (has genre):  46,028 (13.94%)
-Both D2 + D3 matched:    44,559 (13.5%)
+D3 matched (has genre):  45,553 (13.8%)
+Both D2 + D3 matched:    44,328 (13.43%)
 
 Note: D3 matched here (row-level, %) reads higher than 03 Step 5 D1&lt;-&gt;D3 key-level overlap (10.63%) -- that number was computed on UNIQUE join_keys, this one counts every weekly chart row, so a song that matches D3 gets counted once per week it charted.</code></pre>
 </div>
@@ -2570,7 +2569,7 @@ Note: D3 matched here (row-level, %) reads higher than 03 Step 5 D1&lt;-&gt;D3 k
 <section id="step-6-save" class="level2">
 <h2 class="anchored" data-anchor-id="step-6-save">Step 6 — Save</h2>
 <p>Persisted to <code>.pkl</code> for 05 (EDA) / 06 (modeling) to pick up — same pattern as 01’s Step 8 and 03’s Step 6.</p>
-<div id="88201b9f" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:08:19.217811Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:08:19.217584Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:08:19.627265Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:08:19.626617Z&quot;}}" data-execution_count="8">
+<div id="88201b9f" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-08-22T23:31:15.868883Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-08-22T23:31:15.868623Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-08-22T23:31:16.276209Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-08-22T23:31:16.275824Z&quot;}}" data-execution_count="8">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&#39;[STEP 6] Save Final Analysis Dataset&#39;</span>)</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>save_path <span class="op">=</span> <span class="vs">r&#39;</span><span class="dv">..\D</span><span class="vs">ata</span><span class="dv">\D</span><span class="vs">1_D2_D3_joined</span><span class="dv">.</span><span class="vs">pkl&#39;</span></span>
