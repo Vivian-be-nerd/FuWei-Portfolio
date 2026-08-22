@@ -7,7 +7,7 @@ separation so new datasets only require adding a config entry, not new code.
 |------|-------|-----------------------|--------|
 | 01_data_exploration_auto.ipynb ([preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/01_data_exploration_auto.html)) | Data Exploration | Reusable data-quality workflow — swap the config, not the code, to point it at a new dataset | ✅ Complete |
 | 02_data_pattern_analysis_auto.ipynb ([preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/02_data_pattern_analysis_auto.html)) | Pattern Analysis | Reusable text-pattern detection and cleaning-rule design, independent of domain | ✅ Complete |
-| 03_data_wrangling_auto.ipynb | Data Wrangling | One generic cleaning engine driven entirely by config, not per-column code | ✅ Complete |
+| 03_data_wrangling_auto.ipynb ([preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/03_data_wrangling_auto.html)) | Data Wrangling | One generic cleaning engine driven entirely by config, not per-column code | ✅ Complete |
 | 04_data_Joining_auto.ipynb | Data Joining | Reusable multi-source join logic with built-in match-rate validation | ✅ Complete |
 | 05_EDA_auto.ipynb | EDA | A hypothesis → verify → correct analytical discipline, not tied to this dataset | ✅ Complete |
 | 06_modeling_auto.ipynb ([preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/06_modeling_auto.html)) | Modeling | Reusable binary-classification explanatory workflow (LR + RF, feature-importance comparison) — swap the config to test any Hit/Flop-style problem | ✅ Complete |
