@@ -15,8 +15,6 @@ I combine business acumen with technical skills in data visualization, statistic
 
 ## 🔨 Currently Working On
 
-- 🐍 **Reusable Data Analysis Pipeline (Python)** — A 7-stage CONFIG/engine pipeline where a new dataset only needs a new config entry, not new code; converted from an earlier R version
-- 📋 **[Pipeline Build Notes](./pipeline-guides/) (01–07)** — Standardized rules for each stage of the analysis pipeline
 - 🤖 **Claude Skills** — Building AI agent workflows to automate job search research
 - 🔜 **SQL Projects** — Database design and query optimization (coming soon)
 
