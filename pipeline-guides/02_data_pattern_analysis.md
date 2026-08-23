@@ -22,6 +22,8 @@ flowchart TD
     E --> E1[CLEANING_RULES dict\nfeeds directly into 03]
 ```
 
+**See it in action:** [`02_data_pattern_analysis_auto.ipynb`](../data-analysis-projects/music-analysis/Python/02_data_pattern_analysis_auto.ipynb) · [rendered preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/02_data_pattern_analysis_auto.html)
+
 ## What This Stage Did
 
 Looked at the artist/song text columns across all three datasets to figure out what actually needs cleaning: how often symbols like `&`, parentheses, and dashes show up, and what they usually mean (a collaboration marker vs. part of the actual name, a version tag vs. part of the title). The output is `CLEANING_RULES`, a decision dict the next stage executes directly.

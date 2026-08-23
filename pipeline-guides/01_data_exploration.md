@@ -18,6 +18,8 @@ flowchart TD
     D --> D2[Outliers to review\n— human judgment, not auto-clean]
 ```
 
+**See it in action:** [`01_data_exploration_auto.ipynb`](../data-analysis-projects/music-analysis/Python/01_data_exploration_auto.ipynb) · [rendered preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/01_data_exploration_auto.html)
+
 ## What This Stage Did
 
 Checked data quality on all three raw datasets (Billboard Hot 100, Spotify Hit Predictor, Music Dataset 1950–2019) before doing anything else with them: row/column counts, date ranges, duplicates, missing/zero/blank values, value-range violations, and statistical outliers. The output is a health report and action list for each dataset, which the next stage works off.

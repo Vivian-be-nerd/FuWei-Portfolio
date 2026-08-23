@@ -13,7 +13,7 @@ I built a Billboard Hot 100 analysis in R for a graduate coursework project, the
 The design choices (a CONFIG/engine split for the stages that repeat the same logic across datasets, one shared function instead of copy-pasted code, checking every number against the original R output before trusting it) generalize to most structured-data pipelines, not just this one.
 
 > 💡 **See it in action:**  
-> These guides were built from the [Music Hit Analysis: A Six-Decade Study](../data-analysis-projects/music-analysis/proposal.md), analyzing 60+ years of Billboard Hot 100 with Spotify audio features.
+> These guides were built from the [Music Hit Analysis: A Six-Decade Study](../data-analysis-projects/music-analysis/proposal.md) (research questions, datasets, project background) — the actual notebooks live in [`data-analysis-projects/music-analysis/Python`](../data-analysis-projects/music-analysis/Python), each one with a rendered HTML preview.
 
 ---
 
@@ -26,8 +26,8 @@ The design choices (a CONFIG/engine split for the stages that repeat the same lo
 | [03 Data Wrangling](./03_data_wrangling.md) | Clean | Execute cleaning rules, column alignment, join-key creation |
 | [04 Data Joining](./04_data_Joining.md) | Merge | Join strategies, key matching, validation |
 | [05 EDA](./05_EDA.md) | Visualize | Exploratory visualization, trend analysis, three research questions |
-| 06 Modeling | Model | Feature selection, model evaluation |
-| 07 Final Report | Report | Storytelling, presentation structure |
+| [06 Modeling](./06_modeling.md) | Model | Logistic Regression + Random Forest, feature importance, an extended model with era + interaction terms |
+| [07 Final Report](./07_Final_Report.md) | Report | Synthesizing 05 and 06 into one decision-ready narrative, one section per research question |
 
 ---
 

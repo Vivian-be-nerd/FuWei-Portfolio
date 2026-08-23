@@ -17,6 +17,8 @@ flowchart TD
     D --> D4[Step 6: save for 04]
 ```
 
+**See it in action:** [`03_data_wrangling_auto.ipynb`](../data-analysis-projects/music-analysis/Python/03_data_wrangling_auto.ipynb) · [rendered preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/03_data_wrangling_auto.html)
+
 ## What This Stage Did
 
 Executed the cleaning decisions from 02: stripped the noise out of artist/song text, standardized column names across the three datasets, and built a join key for merging them in the next stage.

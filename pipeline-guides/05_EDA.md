@@ -18,6 +18,8 @@ flowchart TD
     E --> E1[Steps 15-21: speechiness trend, decade + genre comparison]
 ```
 
+**See it in action:** [`05_EDA_auto.ipynb`](../data-analysis-projects/music-analysis/Python/05_EDA_auto.ipynb) · [rendered preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/05_EDA_auto.html)
+
 ## What This Stage Did
 
 Took 04's joined dataset and answered three of the four research questions from the project proposal:

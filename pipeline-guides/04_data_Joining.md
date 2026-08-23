@@ -18,6 +18,8 @@ flowchart TD
     D --> D4[Step 6: save for 05/06]
 ```
 
+**See it in action:** [`04_data_Joining_auto.ipynb`](../data-analysis-projects/music-analysis/Python/04_data_Joining_auto.ipynb) · [rendered preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/04_data_Joining_auto.html)
+
 ## What This Stage Did
 
 Merged the three cleaned datasets into one table: Billboard chart data as the base, Spotify audio features joined in as the primary source, and genre/lyric-theme data joined in as a secondary source. Every join reports a match rate, not just "it ran without an error."
@@ -26,11 +28,12 @@ Merged the three cleaned datasets into one table: Billboard chart data as the ba
 
 One shared join function (`dedup_and_left_join`), called twice with different config, since the two joins need different columns and different match criteria. I deliberately didn't carry over every column the third dataset offers. It happens to have its own columns with the same names as the Spotify audio features (danceability, energy, etc.) from a completely different source, and merging all of them would've silently created two different "energy" columns that look interchangeable but aren't.
 
-The first run's match rate came out about 0.04% off from what I expected. Instead of writing that off as rounding, I traced it down using the actual cleaning-rule regex rather than trusting the aggregate percentages alone. That turned up two real gaps in the cleaning rules inherited from 02 that weren't visible at the aggregate level. Fixed both, and the primary join match rate now lands exactly where expected.
+Both join stages also deduplicate their right-hand table before joining — keeping whichever row happens to appear first for a given key, not necessarily the "best" one by any rule. The Spotify dataset alone has roughly 1,300 duplicate keys resolved this way. It's a known, existing limitation rather than something this stage tries to correct — worth revisiting only if it turns out to actually distort a downstream result.
 
 ## Open Questions / Things I'd Revisit
 
-- A small gap (0.03%) remains on the secondary join. I traced the exact cause (an edge case in how one version tag gets matched) and decided not to force a fix, since the fix I tested introduced a new false positive elsewhere. It's a small, understood gap, not a resolved one.
+- The secondary join's match rate (~14%) is far lower than the primary join's (~80%) — expected, since genre/lyric-theme coverage is inherently sparser than audio-feature coverage, but worth remembering as a caveat on any genre-based finding downstream (05, 07).
+- The arbitrary tie-break on duplicate join keys (above) hasn't been checked for whether it actually distorts any specific downstream number — it's flagged as a limitation, not yet confirmed harmless or harmful.
 
 ---
 
