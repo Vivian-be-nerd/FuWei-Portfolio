@@ -1,4 +1,4 @@
-# 01 Data Exploration
+# Build Notes: 01 Data Exploration
 
 ```mermaid
 flowchart TD

@@ -1,4 +1,4 @@
-# 📋 Data Analysis Pipeline Guides
+# 📋 Pipeline Build Notes
 
 Notes from converting a six-stage R analysis pipeline into Python, one stage at a time.
 
@@ -19,7 +19,7 @@ The design choices (a CONFIG/engine split for the stages that repeat the same lo
 
 ## Guides
 
-| Guide | Stage | Description |
+| Notes | Stage | Description |
 |-------|-------|-------------|
 | [01 Data Exploration](./01_data_exploration.md) | Explore | Data quality checks, CONFIG-per-dataset pattern, IQR outlier detection |
 | [02 Data Pattern Analysis](./02_data_pattern_analysis.md) | Analyze | Text pattern detection, symbol/content classification, cleaning-rule design |

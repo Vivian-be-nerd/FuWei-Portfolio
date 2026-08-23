@@ -1,4 +1,4 @@
-# 02 Data Pattern Analysis
+# Build Notes: 02 Data Pattern Analysis
 
 ```mermaid
 flowchart TD

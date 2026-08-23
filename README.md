@@ -16,7 +16,7 @@ I combine business acumen with technical skills in data visualization, statistic
 ## 🔨 Currently Working On
 
 - 🐍 **Reusable Data Analysis Pipeline (Python)** — A 7-stage CONFIG/engine pipeline where a new dataset only needs a new config entry, not new code; converted from an earlier R version
-- 📋 **Data Pipeline Guides (01–07)** — Standardized rules for each stage of the analysis pipeline
+- 📋 **[Pipeline Build Notes](./pipeline-guides/) (01–07)** — Standardized rules for each stage of the analysis pipeline
 - 🤖 **Claude Skills** — Building AI agent workflows to automate job search research
 - 🔜 **SQL Projects** — Database design and query optimization (coming soon)
 
@@ -112,22 +112,12 @@ I combine business acumen with technical skills in data visualization, statistic
 
 ---
 
-### 📋 Data Pipeline Guides
+### 📋 Pipeline Build Notes
 
 > Standardized, reusable templates for each stage of the data analysis pipeline.
 > Built from real project experience — applicable to any structured dataset.
 
-| Guide | Stage | Description | Status |
-|-------|-------|-------------|--------|
-| [01 Data Exploration](./pipeline-guides/01_data_exploration.md) | Explore | Data quality check, validation rules | ✅ Available |
-| [02 Data Pattern Analysis](./pipeline-guides/02_data_pattern_analysis.md) | Analyze | Text pattern detection, symbol/content classification | ✅ Available |
-| [03 Data Wrangling](./pipeline-guides/03_data_wrangling.md) | Clean | Execute cleaning rules, column alignment, join-key creation | ✅ Available |
-| [04 Data Joining](./pipeline-guides/04_data_Joining.md) | Merge | Join strategies, validation | ✅ Available |
-| 05 EDA | Visualize | Exploratory visualization | 🔜 Coming Soon |
-| 06 Modeling | Model | Feature selection, evaluation | 🔜 Coming Soon |
-| 07 Final Report | Report | Storytelling, presentation | 🔜 Coming Soon |
-
-*These guides are continuously updated as I complete each stage.*
+See [`pipeline-guides/`](./pipeline-guides/) for the full list (01–07) and what each stage covers.
 
 ---
 

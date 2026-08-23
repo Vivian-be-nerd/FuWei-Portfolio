@@ -1,4 +1,4 @@
-# 06 Modeling
+# Build Notes: 06 Modeling
 
 ```mermaid
 flowchart TD

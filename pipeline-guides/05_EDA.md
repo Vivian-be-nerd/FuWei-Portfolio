@@ -1,4 +1,4 @@
-# 05 EDA
+# Build Notes: 05 EDA
 
 ```mermaid
 flowchart TD
