@@ -29,9 +29,10 @@ join-key overlap independently reproduced the expected match rate almost exactly
 
 See [`pipeline-guides/04_data_Joining.md`](../../../pipeline-guides/04_data_Joining.md)
 for how `04_data_Joining_auto.ipynb` merges an asymmetric pair of joins with one
-shared engine function, and how tracing a small match-rate gap down to the actual
-cleaning-rule regex (not just the aggregate percentages) turned up two real
-config bugs — fixed, and the primary join now matches the expected rate exactly.
+shared engine function — including a real critical-thinking case around two
+datasets that share column names from completely different sources, and a known
+dedup limitation (whichever row appears first wins) that's flagged rather than
+silently treated as correct.
 
 See [`pipeline-guides/05_EDA.md`](../../../pipeline-guides/05_EDA.md) for why
 `05_EDA_auto.ipynb` deliberately does *not* use CONFIG/engine (three research
@@ -41,3 +42,16 @@ first-pass calculation at face value: a stale chart label that had never been
 updated to match the data behind it, and a mean-of-means statistic that
 overstated Hip-Hop's speechiness ratio (a naive 4.8x vs. 3.86x on a proper,
 row-weighted average).
+
+See [`pipeline-guides/06_modeling.md`](../../../pipeline-guides/06_modeling.md)
+for how `06_modeling_auto.ipynb` runs Logistic Regression and Random Forest
+through the same shared evaluation pipeline, and why Random Forest's clear edge
+(AUC 0.867 vs. 0.807) pointed toward testing feature-interaction terms — one of
+which (`danceability × energy`) turned out to outweigh every individual feature
+once added.
+
+See [`pipeline-guides/07_Final_Report.md`](../../../pipeline-guides/07_Final_Report.md)
+for how `07_Final_Report_auto.ipynb` assembles 05's and 06's findings into one
+report. No CONFIG/engine here — the reusable part isn't the code, it's the report
+*structure*: state a finding, show the chart, add a caveat, repeated once per
+research question.
