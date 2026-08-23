@@ -11,7 +11,8 @@ separation so new datasets only require adding a config entry, not new code.
 | 04_data_Joining_auto.ipynb ([preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/04_data_Joining_auto.html)) | Data Joining | Reusable multi-source join logic with built-in match-rate validation |
 | 05_EDA_auto.ipynb ([preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/05_EDA_auto.html)) | EDA | A hypothesis → verify → correct analytical discipline, not tied to this dataset |
 | 06_modeling_auto.ipynb ([preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/06_modeling_auto.html)) | Modeling | Reusable binary-classification explanatory workflow (LR + RF, feature-importance comparison) — swap the config to test any Hit/Flop-style problem |
-| 07_Final_Report_auto.ipynb ([preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/07_Final_Report_auto.html)) | Final Report | Structuring technical findings into a decision-ready narrative for a non-technical audience |
+| 07_Final_Report_auto.ipynb ([preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/07_Final_Report_auto.html)) | Final Report (Architecture Demo) | The reusable report *structure* — state a finding, show the chart, add a caveat, repeated per research question |
+| 07_Final_Report.ipynb ([preview](https://vivian-be-nerd.github.io/FuWei-Portfolio/data-analysis-projects/music-analysis/Python/07_Final_Report.html)) | Final Report (Complete) | The full final analysis, answering all four research questions in complete depth |
 
 See [`pipeline-guides/01_data_exploration.md`](../../../pipeline-guides/01_data_exploration.md)
 for the design principles behind this script (CONFIG/engine separation, and why
@@ -55,3 +56,10 @@ for how `07_Final_Report_auto.ipynb` assembles 05's and 06's findings into one
 report. No CONFIG/engine here — the reusable part isn't the code, it's the report
 *structure*: state a finding, show the chart, add a caveat, repeated once per
 research question.
+
+`07_Final_Report.ipynb` is a separate file, not a smaller version of the one
+above: it is the complete final analysis, including the deeper investigation
+(a single-era model refit, and every research question's full evidence trail)
+that `07_Final_Report_auto.ipynb` intentionally leaves out to stay a clean
+architecture demo. Read `_auto` for how the report structure generalizes, read
+this one for the actual findings in full.
