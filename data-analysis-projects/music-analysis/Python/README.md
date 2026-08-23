@@ -1,4 +1,4 @@
-# Python Version
+# Python Pipeline (Reusable)
 
 An end-to-end pipeline, stage by stage. Built with a CONFIG/engine
 separation so new datasets only require adding a config entry, not new code.
