@@ -26,7 +26,7 @@ Merged the three cleaned datasets into one table: Billboard chart data as the ba
 
 One shared join function (`dedup_and_left_join`), called twice with different config, since the two joins need different columns and different match criteria. I deliberately didn't carry over every column the third dataset offers. It happens to have its own columns with the same names as the Spotify audio features (danceability, energy, etc.) from a completely different source, and merging all of them would've silently created two different "energy" columns that look interchangeable but aren't.
 
-The first run came out about 0.04% off from what R originally reported. Instead of writing that off as rounding, I ran R's actual join logic directly (this machine has R installed, just not registered as a Jupyter kernel) and diffed the results. That turned up two real gaps in the cleaning rules inherited from 02 that weren't visible at the aggregate level. Fixed both, and the primary join match rate now matches R's reported number exactly.
+The first run's match rate came out about 0.04% off from what I expected. Instead of writing that off as rounding, I traced it down using the actual cleaning-rule regex rather than trusting the aggregate percentages alone. That turned up two real gaps in the cleaning rules inherited from 02 that weren't visible at the aggregate level. Fixed both, and the primary join match rate now lands exactly where expected.
 
 ## Open Questions / Things I'd Revisit
 

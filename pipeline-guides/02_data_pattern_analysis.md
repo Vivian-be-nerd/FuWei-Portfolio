@@ -30,7 +30,7 @@ Looked at the artist/song text columns across all three datasets to figure out w
 
 Split it into two parts: count-and-classify, which is fully automatic (four reusable functions shared across all three datasets), and decide-what-to-clean, which is entirely by hand, after reading every report. The classification functions never decide anything on their own. They just produce evidence for a human to read.
 
-R's original only ran the deeper classification on the first dataset and left the other two on guesswork. I ran it on all three since the code was already generic, and that caught a real gap: one dataset's parenthetical content was being blanket-preserved when the same evidence showed most of it was just as safe to strip as the first dataset's.
+Ran the deeper classification on all three datasets, not just one, since the classification functions were already generic — worth getting real evidence for each dataset instead of assuming they all behave the same way. That caught a real gap: one dataset's parenthetical content was being blanket-preserved when the same evidence showed most of it was just as safe to strip as the first dataset's.
 
 ## Open Questions / Things I'd Revisit
 

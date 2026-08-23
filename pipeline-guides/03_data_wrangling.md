@@ -23,9 +23,9 @@ Executed the cleaning decisions from 02: stripped the noise out of artist/song t
 
 ## How I Did It
 
-R's version hand-writes six separate cleaning functions, one per dataset per column type. I replaced all of them with one generic `clean_column()` that just reads whichever rules apply from `CLEANING_RULES`. It doesn't know or care which dataset it's cleaning. That only works because 02 already settled on one consistent rule format across every dataset; if it hadn't, this stage would've needed dataset-specific branching.
+The naive approach hand-writes six separate cleaning functions, one per dataset per column type. Replaced all of them with one generic `clean_column()` that just reads whichever rules apply from `CLEANING_RULES`. It doesn't know or care which dataset it's cleaning. That only works because 02 already settled on one consistent rule format across every dataset; if it hadn't, this stage would've needed dataset-specific branching.
 
-One inherited quirk I checked instead of just "fixing": R's cleaning logic for the third dataset never lowercases the text, unlike the other two. I checked the raw data directly: it's already 100% lowercase, so R's missing step was harmless, not a bug. I kept the lowercase step here anyway, as a zero-cost safeguard, not a correction to something that was actually broken.
+One quirk I checked instead of just "fixing": the third dataset's raw text was never lowercased upstream, unlike the other two — looked like a possible oversight that could hurt downstream matching. Checked the raw data directly: it's already 100% lowercase, so the missing step was harmless, not a bug. Kept the lowercase step here anyway, as a zero-cost safeguard, not a correction to something that was actually broken.
 
 ## Open Questions / Things I'd Revisit
 

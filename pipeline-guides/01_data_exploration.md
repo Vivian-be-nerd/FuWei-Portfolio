@@ -26,7 +26,7 @@ Checked data quality on all three raw datasets (Billboard Hot 100, Spotify Hit P
 
 One reusable function, `run_exploration()`, takes a small CONFIG per dataset (column descriptions, whether zero is a valid value, expected ranges, how to load the file) and runs the same set of checks against it. Adding a new dataset just means adding a CONFIG entry. The checking logic itself never changes.
 
-One thing I added that R's original didn't have: an automatic statistical outlier check (IQR method) on top of the manual range rules. I only ever label it `[INFO]`, never `[WARN]`, because it's not reliable enough to trust automatically. It flagged the Billboard "weeks on board" column with a nonsensical negative lower bound, and flagged 23% of a heavily skewed column on the third dataset. Statistically unusual isn't the same as wrong.
+One thing this adds beyond the manual range rules: an automatic statistical outlier check (IQR method). I only ever label it `[INFO]`, never `[WARN]`, because it's not reliable enough to trust automatically. It flagged the Billboard "weeks on board" column with a nonsensical negative lower bound, and flagged 23% of a heavily skewed column on the third dataset. Statistically unusual isn't the same as wrong.
 
 ## Open Questions / Things I'd Revisit
 

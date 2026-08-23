@@ -12,8 +12,8 @@ flowchart TD
     C --> C1[Steps 2-6: genre subset, stacked bar + line chart]
     C --> C2[Coverage check: D3 genre match rate is uneven across decades]
 
-    D --> D1[Steps 7-14: shared add_phase_backgrounds helper]
-    D --> D2[Valence vs Energy divergence + sociopolitical/tech overlays]
+    D --> D1[Steps 7-13: shared add_phase_backgrounds helper]
+    D --> D2[Valence vs Energy divergence + sociopolitical-events overlay]
 
     E --> E1[Steps 15-21: speechiness trend, decade + genre comparison]
 ```
@@ -38,7 +38,7 @@ RQ4 (which audio features predict a hit) is a modeling question. That's 06, not 
 
 Each research question gets its own subset of the data and its own charts. I didn't force the same CONFIG/engine pattern I used in 01–04, because each question needs different logic, not the same transform repeated three times. The one place I did pull out shared code: three of the RQ2 charts needed the same background shading, so that became one function instead of three separate copies.
 
-I also didn't just port R's numbers over as-is. I recomputed everything myself and checked it against what R originally reported. That caught a few real issues: a chart label that had been typed by hand and never updated, a genre average that was calculated the wrong way (unweighted instead of weighted by song count), and a chart annotation marking the wrong year for when two trends started diverging.
+I also didn't trust a first-pass calculation at face value — recomputed everything and double-checked it. That caught a few real issues: a chart label that had been typed by hand and never updated to match the data behind it, and a genre average that was calculated the wrong way (unweighted instead of weighted by song count).
 
 ## Open Questions / Things I'd Revisit
 

@@ -15,7 +15,7 @@ I combine business acumen with technical skills in data visualization, statistic
 
 ## 🔨 Currently Working On
 
-- 🐍 **Python Data Analysis Pipeline** — Converting R-based music analysis projects into Python, building reusable analysis templates
+- 🐍 **Reusable Data Analysis Pipeline (Python)** — A 7-stage CONFIG/engine pipeline where a new dataset only needs a new config entry, not new code; converted from an earlier R version
 - 📋 **Data Pipeline Guides (01–07)** — Standardized rules for each stage of the analysis pipeline
 - 🤖 **Claude Skills** — Building AI agent workflows to automate job search research
 - 🔜 **SQL Projects** — Database design and query optimization (coming soon)
@@ -86,15 +86,15 @@ I combine business acumen with technical skills in data visualization, statistic
 
 ### 🐍 Data Analysis Projects (Python & R)
 
-**1. Music Industry Trend Analysis (1958–2021)**
-> End-to-end data analysis pipeline exploring 60+ years of Billboard Hot 100, Spotify audio features, and lyrical themes
+**1. Reusable Data Analysis Pipeline (CONFIG/Engine Architecture)**
+> A 7-stage pipeline (Explore → Pattern Analysis → Wrangling → Joining → EDA → Modeling → Report) built so a new dataset only needs a new config entry, not new code — demonstrated end-to-end on 60+ years of Billboard Hot 100, Spotify audio features, and lyrical themes
 
 - **Datasets**: Billboard Hot 100 (330K records) + Spotify Hit Predictor + Music Dataset 1950–2019
 - **Pipeline**: Data Exploration → Pattern Analysis → Wrangling → Joining → EDA → Modeling → Report
 - **Tools**: Python (pandas, scikit-learn), R (tidyverse, ggplot2)
-- **Key Skills**: Data quality validation, feature engineering, classification modeling
+- **Key Skills**: Reusable pipeline architecture, data quality validation, feature engineering, classification modeling
 - R version: ✅ Complete (01–07)
-- Python version: 🔨 In Progress
+- Python version: ✅ Complete (01–07)
 - [View Project →](./data-analysis-projects/music-analysis/)
 
 ---
