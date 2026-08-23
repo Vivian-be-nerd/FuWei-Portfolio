@@ -19,15 +19,15 @@ The design choices (a CONFIG/engine split for the stages that repeat the same lo
 
 ## Guides
 
-| Guide | Stage | Description | Status |
-|-------|-------|-------------|--------|
-| [01 Data Exploration](./01_data_exploration.md) | Explore | Data quality checks, CONFIG-per-dataset pattern, IQR outlier detection | ✅ Available |
-| [02 Data Pattern Analysis](./02_data_pattern_analysis.md) | Analyze | Text pattern detection, symbol/content classification, cleaning-rule design | ✅ Available |
-| [03 Data Wrangling](./03_data_wrangling.md) | Clean | Execute cleaning rules, column alignment, join-key creation | ✅ Available |
-| [04 Data Joining](./04_data_Joining.md) | Merge | Join strategies, key matching, validation | ✅ Available |
-| [05 EDA](./05_EDA.md) | Visualize | Exploratory visualization, trend analysis, three research questions | ✅ Available |
-| 06 Modeling | Model | Feature selection, model evaluation | 🔜 Coming Soon |
-| 07 Final Report | Report | Storytelling, presentation structure | 🔜 Coming Soon |
+| Guide | Stage | Description |
+|-------|-------|-------------|
+| [01 Data Exploration](./01_data_exploration.md) | Explore | Data quality checks, CONFIG-per-dataset pattern, IQR outlier detection |
+| [02 Data Pattern Analysis](./02_data_pattern_analysis.md) | Analyze | Text pattern detection, symbol/content classification, cleaning-rule design |
+| [03 Data Wrangling](./03_data_wrangling.md) | Clean | Execute cleaning rules, column alignment, join-key creation |
+| [04 Data Joining](./04_data_Joining.md) | Merge | Join strategies, key matching, validation |
+| [05 EDA](./05_EDA.md) | Visualize | Exploratory visualization, trend analysis, three research questions |
+| 06 Modeling | Model | Feature selection, model evaluation |
+| 07 Final Report | Report | Storytelling, presentation structure |
 
 ---
 

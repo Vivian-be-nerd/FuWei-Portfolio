@@ -32,7 +32,7 @@ I combine business acumen with technical skills in data visualization, statistic
 | 2025 Q3 | Data Visualization (Power BI) | ✅ Completed |
 | 2025 Q4 | SQL Server, Data Warehousing (SSMS, SSIS, SSRS) | ✅ Completed |
 | 2026 Q1 | Advanced Database, R & Python, Machine Learning (SAS) | ✅ Completed |
-| 2026 Q2 | Python Data Analysis Pipeline | 🔨 In Progress |
+| 2026 Q2 | Python Data Analysis Pipeline | ✅ Completed |
 | 2026 Q3 | Claude Code, Agent Development | 🔨 In Progress |
 | 2026 Q4 | End-to-end Automated Pipeline | 🔜 Planned |
 
