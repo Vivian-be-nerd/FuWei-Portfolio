@@ -3118,6 +3118,9 @@ D2 has decade-level labels only, not exact release year — the Section 6.3 “t
 <section id="spotify-audio-features" class="level3">
 <h3 class="anchored" data-anchor-id="spotify-audio-features">7.5 Spotify Audio Features</h3>
 <p>Valence, Energy, Speechiness, and the other audio features are estimated purely from the audio signal (rhythm, timbre, harmonic content) — they capture the <em>sonic</em> dimension of a track, not lyrical meaning or cultural context. A song can score high on Valence (musically “positive-sounding”) while its lyrics convey something entirely different — this is a known limitation of the features themselves, not an error in this analysis.</p>
+<p><strong>Instrumentalness and Acousticness:</strong> these two are estimated by an undisclosed model, and can misjudge tracks with unusual vocal timbre. Spotify’s own documentation defines Instrumentalness as predicting “whether a track contains no vocals… the closer the instrumentalness value is to 1.0, the greater likelihood the track contains no vocal content,” and Acousticness as “a confidence measure … of whether the track is acoustic.” The detection algorithm behind these scores is not published. A documented case from <a href="https://community.spotify.com/t5/Spotify-for-Developers/Acousticness-and-Instrumentalness-fooled-by-Harpsichord/td-p/5347999">Spotify’s developer community</a> shows the risk directly: two purely instrumental harpsichord recordings (Bach’s <em>Well-Tempered Clavier</em>, no vocals at all) scored an Instrumentalness of just 0.1, meaning the model was “quite certain” they contained vocals when they contained none.</p>
+<p>The top 5 Billboard Hot 100 songs by combined Instrumentalness × Acousticness in <code>analysis_base</code> show the same pattern in reverse. Two are genuine, verified instrumental screen themes (<em>Batman Theme</em>, Neal Hefti, from the 1966 TV series; <em>(Theme From) Love Story</em>, Henry Mancini, from the 1970 film) and one is a genuine instrumental jazz trio recording (<em>Water Boy</em>, Don Shirley Trio). The other two, <em>I’m Not The Only One</em> (Sam Smith, peaked #5) and <em>You’re Beautiful</em> (James Blunt, peaked #1), are well-known vocal ballads that score 0.93-0.96 Instrumentalness despite containing vocals throughout, consistent with the same kind of misjudgment documented above.</p>
+<p><strong>The Section 8 “Acoustic Instrumentation” finding should be read as a genuine model coefficient (instrumentalness × acousticness: +6.93), illustrated with a verified example, not as proof that every high-scoring song in the underlying data is actually vocal-free.</strong></p>
 </section>
 </section>
 <section id="conclusion" class="level2">
@@ -3315,10 +3318,10 @@ Value
 Hit example
 </td>
 <td>
-I’m Not The Only One – Sam Smith
+(Theme From) Love Story – Henry Mancini
 </td>
 <td>
-instrumentalness 0.96, acousticness 0.99
+instrumentalness 0.95, acousticness 0.96
 </td>
 </tr>
 <tr>
