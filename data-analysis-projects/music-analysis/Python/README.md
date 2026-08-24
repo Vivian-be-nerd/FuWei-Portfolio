@@ -57,7 +57,7 @@ report. No CONFIG/engine here — the reusable part isn't the code, it's the rep
 *structure*: state a finding, show the chart, add a caveat, repeated once per
 research question.
 
-`07_Final_Report.ipynb` is a separate file, not a smaller version of the one
+[`07_Final_Report.ipynb`](https://github.com/Vivian-be-nerd/FuWei-Portfolio/blob/main/data-analysis-projects/music-analysis/Python/07_Final_Report.ipynb) is a separate file, not a smaller version of the one
 above: it is the complete final analysis, including the deeper investigation
 (a single-era model refit, and every research question's full evidence trail)
 that `07_Final_Report_auto.ipynb` intentionally leaves out to stay a clean
